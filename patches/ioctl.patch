@@ -1,0 +1,19 @@
+diff --git a/Kernel/API/Ioctl.h b/Kernel/API/Ioctl.h
+index 3a811a108a..cc6f47bfac 100644
+--- a/Kernel/API/Ioctl.h
++++ b/Kernel/API/Ioctl.h
+@@ -11,12 +11,14 @@
+ extern "C" {
+ #endif
+ 
++#ifdef __serenity__
+ struct winsize {
+     unsigned short ws_row;
+     unsigned short ws_col;
+     unsigned short ws_xpixel;
+     unsigned short ws_ypixel;
+ };
++#endif
+ 
+ struct GraphicsConnectorProperties {
+     unsigned char multihead_support;

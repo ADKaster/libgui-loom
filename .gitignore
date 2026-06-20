@@ -1,0 +1,17 @@
+caches/
+build/
+Build/
+.vscode
+.ccls-cache
+compile_commands.json
+.cache
+.clang_complete
+.clangd
+.idea/
+cmake-build-debug/
+output/
+.vim/
+.helix/
+
+.DS_Store
+
