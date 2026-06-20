@@ -6,6 +6,10 @@ project(libgui_loom
     LANGUAGES C CXX
 )
 
+if (APPLE)
+    enable_language(OBJCXX)
+endif()
+
 if (NOT DEFINED ENV{SERENITY_SOURCE_DIR} OR "$ENV{SERENITY_SOURCE_DIR}" STREQUAL "")
     message(FATAL_ERROR "SERENITY_SOURCE_DIR environment variable is not set.")
 endif()
@@ -173,36 +177,16 @@ compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowClient.i
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowManagerServer.ipc Userland/Services/WindowServer/WindowManagerServerEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowManagerClient.ipc Userland/Services/WindowServer/WindowManagerClientEndpoint.h)
 
-# HAXity HAX, this won't work at runtime
-# Needed by shared class, WindowServer::ScreenLayout
-configure_file(${SERENITY_SOURCE_DIR}/Userland/Libraries/LibC/sys/device.h ${CMAKE_CURRENT_BINARY_DIR}/hax/sys/device.h @ONLY)
-configure_file(${SERENITY_SOURCE_DIR}/Userland/Libraries/LibC/sys/ioctl.h ${CMAKE_CURRENT_BINARY_DIR}/hax/sys/ioctl.h @ONLY)
-configure_file(${SERENITY_SOURCE_DIR}/Userland/Libraries/LibC/sys/devices/gpu.h ${CMAKE_CURRENT_BINARY_DIR}/hax/sys/devices/gpu.h @ONLY)
-configure_file(${SERENITY_SOURCE_DIR}/Userland/Libraries/LibC/sys/sysmacros.h ${CMAKE_CURRENT_BINARY_DIR}/hax/sys/sysmacros.h @ONLY)
-configure_file(${SERENITY_SOURCE_DIR}/Kernel/API/Ioctl.h ${CMAKE_CURRENT_BINARY_DIR}/hax/Kernel/API/Ioctl.h @ONLY)
-
-find_program(PATCH_PROGRAM patch)
-if (NOT PATCH_PROGRAM)
-    message(FATAL_ERROR "Required program 'patch' was not found in PATH.")
+add_serenity_subdirectory(Userland/Libraries/LibGUI)
+target_include_directories(LibGUI BEFORE PRIVATE src/extras)
+if (APPLE)
+    set_source_files_properties(
+        ${SERENITY_SOURCE_DIR}/Userland/Libraries/LibGUI/ScreenLayout.cpp
+        TARGET_DIRECTORY LibGUI
+        PROPERTIES LANGUAGE OBJCXX
+    )
 endif()
 
-set(IOCTL_HEADER_PATH "${CMAKE_CURRENT_BINARY_DIR}/hax/Kernel/API/Ioctl.h")
-set(IOCTL_PATCH_PATH "${CMAKE_CURRENT_SOURCE_DIR}/patches/ioctl.patch")
-
-add_custom_command(
-    OUTPUT "${IOCTL_HEADER_PATH}.patched"
-    COMMAND ${PATCH_PROGRAM} -N "${IOCTL_HEADER_PATH}" -i "${IOCTL_PATCH_PATH}"
-    COMMAND ${CMAKE_COMMAND} -E touch "${IOCTL_HEADER_PATH}.patched"
-    DEPENDS "${IOCTL_HEADER_PATH}" "${IOCTL_PATCH_PATH}"
-    COMMENT "Patching ${IOCTL_HEADER_PATH} with ${IOCTL_PATCH_PATH}"
-    VERBATIM
-)
-add_custom_target(patch_ioctl_header DEPENDS "${IOCTL_HEADER_PATH}.patched")
-add_dependencies(all_generated patch_ioctl_header)
-
-## end horrible hax
-
-add_serenity_subdirectory(Userland/Libraries/LibGUI)
-
-add_dependencies(LibGUI patch_ioctl_header)
-target_include_directories(LibGUI BEFORE PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/hax)
+if (APPLE)
+    add_subdirectory(src/Loom)
+endif()
