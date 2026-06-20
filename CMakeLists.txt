@@ -151,10 +151,16 @@ add_serenity_subdirectory(Meta/Lagom/Tools/CodeGenerators)
 
 set(libs
     Config
+    Compress
+    Crypto
     ELF
     Gfx
     IPC
     ImageDecoderClient
+    Regex
+    RIFF
+    Syntax
+    TextCodec
     Threading
     Unicode
 )
@@ -178,8 +184,12 @@ compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowManagerS
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowManagerClient.ipc Userland/Services/WindowServer/WindowManagerClientEndpoint.h)
 
 add_serenity_subdirectory(Userland/Libraries/LibGUI)
-target_include_directories(LibGUI BEFORE PRIVATE src/extras)
+target_include_directories(LibGUI BEFORE PRIVATE extras)
 if (APPLE)
+
+    find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+    target_link_libraries(LibGUI PRIVATE ${APPKIT_FRAMEWORK})
+
     set_source_files_properties(
         ${SERENITY_SOURCE_DIR}/Userland/Libraries/LibGUI/ScreenLayout.cpp
         TARGET_DIRECTORY LibGUI
@@ -187,6 +197,4 @@ if (APPLE)
     )
 endif()
 
-if (APPLE)
-    add_subdirectory(src/Loom)
-endif()
+add_subdirectory(src)
