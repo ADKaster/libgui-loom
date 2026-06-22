@@ -6,12 +6,14 @@
 
 #include "IPCBridge.h"
 #include <LibCore/Socket.h>
+#include <LibCore/Directory.h>
 
 namespace Loom
 {
 
-IPCBridge::IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server)
+IPCBridge::IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> clipboard_server)
     : m_window_server(move(window_server))
+    , m_clipboard_server(move(clipboard_server))
 {
 }
 
@@ -49,14 +51,20 @@ static ErrorOr<int> create_ipc_socket(ByteString const& socket_path)
 
 NonnullOwnPtr<IPCBridge> IPCBridge::create()
 {
-    // FIXME: Create paths in /tmp if they don't exist
+    MUST(Core::Directory::create("/tmp/portal"sv, Core::Directory::CreateDirectories::Yes));
+    MUST(Core::Directory::create("/tmp/session/0/portal"sv, Core::Directory::CreateDirectories::Yes));
 
     auto window_server_server = MUST(Core::LocalServer::try_create());
     auto const window_server_socket = MUST(create_ipc_socket("/tmp/portal/window"sv));
     MUST(window_server_server->take_over_fd(window_server_socket));
     auto window_server = MUST(IPC::MultiServer<WindowServerConnectionProxy>::try_create(move(window_server_server)));
 
-    return adopt_own(*new IPCBridge(move(window_server)));
+    auto clipboard_server_server = MUST(Core::LocalServer::try_create());
+    auto const clipboard_server_socket = MUST(create_ipc_socket("/tmp/session/0/portal/clipboard"sv));
+    MUST(clipboard_server_server->take_over_fd(clipboard_server_socket));
+    auto clipboard_server = MUST(IPC::MultiServer<ClipboardConnectionProxy>::try_create(move(clipboard_server_server)));
+
+    return adopt_own(*new IPCBridge(move(window_server), move(clipboard_server)));
 }
 
 }

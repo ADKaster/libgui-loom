@@ -18,6 +18,7 @@ endif()
 
 target_sources(Loom PRIVATE
     IPCBridge.cpp
+    ClipboardConnectionProxy.cpp
     WindowServerConnectionProxy.cpp
 )
 target_include_directories(Loom PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)

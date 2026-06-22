@@ -16,7 +16,7 @@ class WindowServerConnectionProxy final
     : public IPC::ConnectionFromClient<WindowClientEndpoint, WindowServerEndpoint>  {
     C_OBJECT(WindowServerConnectionProxy);
 public:
-    virtual ~WindowServerConnectionProxy();
+    virtual ~WindowServerConnectionProxy() override;
 
 private:
 
