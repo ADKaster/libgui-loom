@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#import <Cocoa/Cocoa.h>
+#include <LibCore/EventLoop.h>
+#include "CocoaWrapper.h"
+#include "EventLoopImplementation.h"
 
 @interface LoomAppDelegate : NSObject <NSApplicationDelegate>
 @end
@@ -40,15 +42,16 @@
 
 int main(int argc, const char* argv[])
 {
-    @autoreleasepool {
-        NSApplication* app = [NSApplication sharedApplication];
-        LoomAppDelegate* delegate = [LoomAppDelegate new];
-        [app setActivationPolicy:NSApplicationActivationPolicyRegular];
-        [app setDelegate:delegate];
-        [app run];
-    }
+    Core::EventLoopManager::install(*new Mac::CFEventLoopManager);
+    Core::EventLoop event_loop;
+
+    NSApplication* app = [NSApplication sharedApplication];
+    LoomAppDelegate* delegate = [LoomAppDelegate alloc];
+    [app setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [app setDelegate:delegate];
 
     (void)argc;
     (void)argv;
-    return 0;
+
+    return event_loop.exec();;
 }

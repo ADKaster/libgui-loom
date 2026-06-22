@@ -4,6 +4,7 @@ if (APPLE)
         MACOSX_BUNDLE
         AppKit/main.mm
         AppKit/ScreenLayout.mm
+        AppKit/EventLoopImplementation.mm
     )
 
     target_include_directories(Loom BEFORE PRIVATE
@@ -17,4 +18,4 @@ endif()
 target_sources(Loom PRIVATE
     WindowServerConnectionProxy.cpp
 )
-target_link_libraries(Loom PRIVATE LibIPC LibGfx)
+target_link_libraries(Loom PRIVATE LibCore LibIPC LibGfx)
