@@ -5,6 +5,8 @@
  */
 
 #include <LibCore/System.h>
+#include <LibCore/Environment.h>
+#include <LibCore/ResourceImplementationFile.h>
 #include <LibGUI/Application.h>
 #include <LibGUI/BoxLayout.h>
 #include <LibGUI/Button.h>
@@ -15,6 +17,17 @@
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     TRY(Core::System::pledge("stdio recvfd sendfd rpath wpath cpath unix"));
+
+    // FIXME: We need a non-intrusive way to set up resources
+    {
+        auto serenity_source_dir = Core::Environment::get("SERENITY_SOURCE_DIR"sv);
+        if (!serenity_source_dir.has_value()) {
+            warnln("SERENITY_SOURCE_DIR environment variable is not set");
+            return 1;
+        }
+        auto resource_dir = MUST(String::formatted("{}/Base/res", serenity_source_dir.value()));
+        Core::ResourceImplementation::install(make<Core::ResourceImplementationFile>(resource_dir));
+    }
 
     auto app = TRY(GUI::Application::create(arguments));
 
