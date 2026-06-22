@@ -5,9 +5,22 @@
  */
 
 #include "ApplicationDelegate.h"
+#include <AK/OwnPtr.h>
+#include <Loom/IPCBridge.h>
 
 @implementation LoomAppDelegate {
     NSWindow* _window;
+    OwnPtr<Loom::IPCBridge> m_ipc_bridge;
+}
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self == nil)
+        return nil;
+
+    m_ipc_bridge = Loom::IPCBridge::create();
+    return self;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification*)notification

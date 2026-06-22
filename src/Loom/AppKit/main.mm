@@ -15,7 +15,7 @@ int main(int argc, const char* argv[])
     Core::EventLoop event_loop;
 
     NSApplication* app = [NSApplication sharedApplication];
-    LoomAppDelegate* delegate = [LoomAppDelegate alloc];
+    LoomAppDelegate* delegate = [[LoomAppDelegate alloc] init];
     [app setActivationPolicy:NSApplicationActivationPolicyRegular];
     [app setDelegate:delegate];
 

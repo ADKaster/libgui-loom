@@ -17,6 +17,8 @@ if (APPLE)
 endif()
 
 target_sources(Loom PRIVATE
+    IPCBridge.cpp
     WindowServerConnectionProxy.cpp
 )
-target_link_libraries(Loom PRIVATE LibCore LibIPC LibGfx)
+target_include_directories(Loom PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_link_libraries(Loom PRIVATE AK LibCore LibIPC LibGfx)
