@@ -52,7 +52,7 @@ NonnullOwnPtr<IPCBridge> IPCBridge::create()
     // FIXME: Create paths in /tmp if they don't exist
 
     auto window_server_server = MUST(Core::LocalServer::try_create());
-    auto window_server_socket = MUST(create_ipc_socket("/tmp/portal/window"sv));
+    auto const window_server_socket = MUST(create_ipc_socket("/tmp/portal/window"sv));
     MUST(window_server_server->take_over_fd(window_server_socket));
     auto window_server = MUST(IPC::MultiServer<WindowServerConnectionProxy>::try_create(move(window_server_server)));
 

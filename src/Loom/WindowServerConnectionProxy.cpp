@@ -22,7 +22,9 @@ WindowServerConnectionProxy::WindowServerConnectionProxy(NonnullOwnPtr<Core::Loc
         s_connections = new HashMap<int, NonnullRefPtr<WindowServerConnectionProxy>>;
     s_connections->set(client_id, *this);
 
-    // FIXME: async_fast_greet()
+    // FIXME: Actually get info about # of screens from backend
+    Vector<Gfx::IntRect, 1> const screen_rects = { { 0, 0, 1024, 768 } };
+    async_fast_greet(screen_rects, 0, 1, 1, Gfx::current_system_theme_buffer(), Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query(), {}, client_id);
 }
 
 WindowServerConnectionProxy::~WindowServerConnectionProxy() = default;
