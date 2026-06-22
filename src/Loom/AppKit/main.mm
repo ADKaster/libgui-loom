@@ -5,40 +5,9 @@
  */
 
 #include <LibCore/EventLoop.h>
+#include "ApplicationDelegate.h"
 #include "CocoaWrapper.h"
 #include "EventLoopImplementation.h"
-
-@interface LoomAppDelegate : NSObject <NSApplicationDelegate>
-@end
-
-@implementation LoomAppDelegate {
-    NSWindow* _window;
-}
-
-- (void)applicationDidFinishLaunching:(NSNotification*)notification
-{
-    (void)notification;
-
-    NSRect frame = NSMakeRect(0, 0, 900, 600);
-    NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
-
-    _window = [[NSWindow alloc] initWithContentRect:frame
-                                          styleMask:style
-                                            backing:NSBackingStoreBuffered
-                                              defer:NO];
-    [_window setTitle:@"Loom"];
-    [_window center];
-    [_window makeKeyAndOrderFront:nil];
-    [NSApp activateIgnoringOtherApps:YES];
-}
-
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication*)sender
-{
-    (void)sender;
-    return YES;
-}
-
-@end
 
 int main(int argc, const char* argv[])
 {
@@ -53,5 +22,5 @@ int main(int argc, const char* argv[])
     (void)argc;
     (void)argv;
 
-    return event_loop.exec();;
+    return event_loop.exec();
 }

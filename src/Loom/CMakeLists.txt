@@ -3,6 +3,7 @@ if (APPLE)
     add_executable(Loom
         MACOSX_BUNDLE
         AppKit/main.mm
+        AppKit/ApplicationDelegate.mm
         AppKit/ScreenLayout.mm
         AppKit/EventLoopImplementation.mm
     )
