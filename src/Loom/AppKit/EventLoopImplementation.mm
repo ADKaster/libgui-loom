@@ -440,12 +440,8 @@ void CFEventLoopImplementation::wake()
 
 void CFEventLoopImplementation::deferred_invoke(Function<void()>&& invokee)
 {
-    m_thread_event_queue.deferred_invoke(move(invokee));
-
-    bool expected = false;
-    if (m_impl->deferred_source && m_impl->deferred_source_pending.compare_exchange_strong(expected, true))
-        CFRunLoopSourceSignal(m_impl->deferred_source);
-
+    EventLoopImplementation::deferred_invoke(move(invokee));
+    CFRunLoopSourceSignal(m_impl->deferred_source);
     if (&m_thread_event_queue != &Core::ThreadEventQueue::current())
         wake();
 }

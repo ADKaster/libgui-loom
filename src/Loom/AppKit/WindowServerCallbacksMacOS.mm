@@ -48,7 +48,7 @@ void WindowServerCallbacksMacOS::flash_menubar_menu(i32, i32)
 {
 }
 
-void WindowServerCallbacksMacOS::create_window(i32, i32, Gfx::IntRect const&, bool, bool, bool, bool, bool, bool, bool, bool, float, Gfx::IntSize, Gfx::IntSize, Gfx::IntSize, Optional<Gfx::IntSize> const&, i32, i32, ByteString const&, i32, Gfx::IntRect const&)
+void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gfx::IntRect const& rect, bool auto_position, bool has_alpha_channel, bool minimizable, bool closeable, bool resizable, bool fullscreen, bool frameless, bool forced_shadow, float alpha_hit_threshold, Gfx::IntSize base_size, Gfx::IntSize size_increment, Gfx::IntSize minimum_size, Optional<Gfx::IntSize> const& resize_aspect_ratio, i32 type, i32 mode, ByteString const& title, i32 parent_window_id, Gfx::IntRect const& launch_origin_rect)
 {
 }
 
