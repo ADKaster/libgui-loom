@@ -39,7 +39,10 @@ public:
     virtual size_t pump(PumpMode) override;
     virtual void quit(int) override;
     virtual void wake() override;
+    virtual void deferred_invoke(Function<void()>&&) override;
     virtual void post_event(Core::EventReceiver* receiver, NonnullOwnPtr<Core::Event>&&) override;
+
+    virtual ~CFEventLoopImplementation() override;
 
     // FIXME: These APIs only exist for obscure use-cases inside SerenityOS. Try to get rid of them.
     virtual void unquit() override { }
@@ -47,7 +50,10 @@ public:
     virtual void notify_forked_and_in_child() override { }
 
 private:
-    CFEventLoopImplementation() = default;
+    CFEventLoopImplementation();
+
+    struct Impl;
+    NonnullOwnPtr<Impl> m_impl;
 
     int m_exit_code { 0 };
 };

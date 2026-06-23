@@ -5,6 +5,7 @@
  */
 
 #include <AK/Assertions.h>
+#include <AK/Atomic.h>
 #include <AK/IDAllocator.h>
 #include <AK/Singleton.h>
 #include <AK/TemporaryChange.h>
@@ -201,6 +202,33 @@ static void post_application_event()
     [NSApp postEvent:event atStart:NO];
 }
 
+struct CFEventLoopImplementation::Impl {
+    Impl(CFEventLoopImplementation& event_loop_implementation)
+        : run_loop(CFRunLoopGetCurrent())
+    {
+        CFRunLoopSourceContext context {};
+        context.info = &event_loop_implementation;
+        context.perform = [](void* info) {
+            auto& self = *static_cast<CFEventLoopImplementation*>(info);
+            self.m_impl->deferred_source_pending = false;
+            self.m_thread_event_queue.process();
+        };
+
+        deferred_source = CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
+        CFRunLoopAddSource(run_loop, deferred_source, kCFRunLoopCommonModes);
+    }
+
+    ~Impl()
+    {
+        CFRunLoopRemoveSource(run_loop, deferred_source, kCFRunLoopCommonModes);
+        CFRelease(deferred_source);
+    }
+
+    CFRunLoopRef run_loop { nullptr };
+    CFRunLoopSourceRef deferred_source { nullptr };
+    Atomic<bool> deferred_source_pending { false };
+};
+
 NonnullOwnPtr<Core::EventLoopImplementation> CFEventLoopManager::make_implementation()
 {
     return CFEventLoopImplementation::create();
@@ -311,7 +339,7 @@ void CFEventLoopManager::unregister_notifier(Core::Notifier& notifier)
 
 void CFEventLoopManager::did_post_event()
 {
-    post_application_event();
+    CFRunLoopWakeUp(CFRunLoopGetCurrent());
 }
 
 static void handle_signal(CFFileDescriptorRef f, CFOptionFlags callback_types, void* info)
@@ -365,6 +393,13 @@ NonnullOwnPtr<CFEventLoopImplementation> CFEventLoopImplementation::create()
     return adopt_own(*new CFEventLoopImplementation);
 }
 
+CFEventLoopImplementation::CFEventLoopImplementation()
+    : m_impl(make<Impl>(*this))
+{
+}
+
+CFEventLoopImplementation::~CFEventLoopImplementation() = default;
+
 int CFEventLoopImplementation::exec()
 {
     [NSApp run];
@@ -400,7 +435,18 @@ void CFEventLoopImplementation::quit(int exit_code)
 
 void CFEventLoopImplementation::wake()
 {
-    CFRunLoopWakeUp(CFRunLoopGetCurrent());
+    CFRunLoopWakeUp(m_impl->run_loop);
+}
+
+void CFEventLoopImplementation::deferred_invoke(Function<void()>&& invokee)
+{
+    m_thread_event_queue.post_event(nullptr, make<Core::DeferredInvocationEvent>(move(invokee)));
+
+    bool expected = false;
+    if (m_impl->deferred_source_pending.compare_exchange_strong(expected, true))
+        CFRunLoopSourceSignal(m_impl->deferred_source);
+
+    wake();
 }
 
 void CFEventLoopImplementation::post_event(Core::EventReceiver* receiver, NonnullOwnPtr<Core::Event>&& event)
