@@ -16,7 +16,6 @@
 #import "EventLoopImplementation.h"
 #import <CoreFoundation/CoreFoundation.h>
 
-#include <pthread.h>
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -235,7 +234,7 @@ intptr_t CFEventLoopManager::register_timer(Core::EventReceiver& receiver, int i
             receiver->dispatch_event(event);
         });
 
-    CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopCommonModes);
+    CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
     thread_data.timers.set(timer_id, timer);
 
     return timer_id;
