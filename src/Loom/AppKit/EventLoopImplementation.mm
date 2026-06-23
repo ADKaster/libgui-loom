@@ -289,7 +289,7 @@ static void socket_notifier(CFSocketRef socket, CFSocketCallBackType notificatio
     // before dispatching the event, which allows it to be triggered again.
     CFSocketEnableCallBacks(socket, notification_type);
 
-    Core::NotifierActivationEvent event(notifier.fd(), notifier.type());
+    Core::NotifierActivationEvent event;
     notifier.dispatch_event(event);
 
     // This manual process of enabling the callbacks also seems to require waking the event loop,
@@ -322,7 +322,7 @@ void CFEventLoopManager::register_notifier(Core::Notifier& notifier)
     CFSocketSetSocketFlags(socket, sockopt);
 
     auto* source = CFSocketCreateRunLoopSource(kCFAllocatorDefault, socket, 0);
-    CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopDefaultMode);
+    CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopCommonModes);
 
     CFRelease(socket);
 
@@ -332,7 +332,7 @@ void CFEventLoopManager::register_notifier(Core::Notifier& notifier)
 void CFEventLoopManager::unregister_notifier(Core::Notifier& notifier)
 {
     if (auto source = ThreadData::the().notifiers.take(&notifier); source.has_value()) {
-        CFRunLoopRemoveSource(CFRunLoopGetCurrent(), *source, kCFRunLoopDefaultMode);
+        CFRunLoopRemoveSource(CFRunLoopGetCurrent(), *source, kCFRunLoopCommonModes);
         CFRelease(*source);
     }
 }
@@ -440,13 +440,14 @@ void CFEventLoopImplementation::wake()
 
 void CFEventLoopImplementation::deferred_invoke(Function<void()>&& invokee)
 {
-    m_thread_event_queue.post_event(nullptr, make<Core::DeferredInvocationEvent>(move(invokee)));
+    m_thread_event_queue.deferred_invoke(move(invokee));
 
     bool expected = false;
-    if (m_impl->deferred_source_pending.compare_exchange_strong(expected, true))
+    if (m_impl->deferred_source && m_impl->deferred_source_pending.compare_exchange_strong(expected, true))
         CFRunLoopSourceSignal(m_impl->deferred_source);
 
-    wake();
+    if (&m_thread_event_queue != &Core::ThreadEventQueue::current())
+        wake();
 }
 
 void CFEventLoopImplementation::post_event(Core::EventReceiver* receiver, NonnullOwnPtr<Core::Event>&& event)
