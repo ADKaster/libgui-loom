@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "CocoaWrapper.h"
+
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibGfx/SystemTheme.h>
 #include <LibGfx/Palette.h>
@@ -11,8 +13,8 @@
 #include <LibCore/EventLoop.h>
 #include <LibCore/ResourceImplementation.h>
 #include <LibCore/ResourceImplementationFile.h>
+#include "Application.h"
 #include "ApplicationDelegate.h"
-#include "CocoaWrapper.h"
 #include "EventLoopImplementation.h"
 
 int main(int argc, const char* argv[])
@@ -20,7 +22,7 @@ int main(int argc, const char* argv[])
     Core::EventLoopManager::install(*new Mac::CFEventLoopManager);
     Core::EventLoop event_loop;
 
-    NSApplication* app = [NSApplication sharedApplication];
+    NSApplication* app = [::Application sharedApplication];
     LoomAppDelegate* delegate = [[LoomAppDelegate alloc] init];
     [app setActivationPolicy:NSApplicationActivationPolicyRegular];
     [app setDelegate:delegate];
