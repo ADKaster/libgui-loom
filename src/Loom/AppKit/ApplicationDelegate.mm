@@ -5,8 +5,10 @@
  */
 
 #include "ApplicationDelegate.h"
+#include <AK/NonnullRefPtr.h>
 #include <AK/OwnPtr.h>
 #include <Loom/IPCBridge.h>
+#include "WindowServerCallbacksMacOS.h"
 
 @implementation LoomAppDelegate {
     NSWindow* _window;
@@ -19,7 +21,8 @@
     if (self == nil)
         return nil;
 
-    m_ipc_bridge = Loom::IPCBridge::create();
+    auto callbacks = make_ref_counted<Loom::WindowServerCallbacksMacOS>();
+    m_ipc_bridge = Loom::IPCBridge::create(move(callbacks));
     return self;
 }
 

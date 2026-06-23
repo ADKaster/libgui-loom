@@ -19,13 +19,14 @@ class IPCBridge
     AK_MAKE_NONMOVABLE(IPCBridge);
 public:
 
-    static NonnullOwnPtr<IPCBridge> create();
+    static NonnullOwnPtr<IPCBridge> create(NonnullRefPtr<WindowServerCallbacks>);
 
     ~IPCBridge();
 
 private:
-    IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>>);
+    IPCBridge(NonnullRefPtr<WindowServerCallbacks>, NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>>);
 
+    NonnullRefPtr<WindowServerCallbacks> m_window_server_callbacks;
     NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> m_window_server;
     NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> m_clipboard_server;
 };

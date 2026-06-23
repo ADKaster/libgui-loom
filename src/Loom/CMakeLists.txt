@@ -7,6 +7,7 @@ if (APPLE)
         AppKit/ApplicationDelegate.mm
         AppKit/ScreenLayout.mm
         AppKit/EventLoopImplementation.mm
+        AppKit/WindowServerCallbacksMacOS.mm
     )
 
     target_include_directories(Loom BEFORE PRIVATE

@@ -6,35 +6,16 @@
 
 #pragma once
 
-#include <AK/RefPtr.h>
-#include <LibCore/EventReceiver.h>
-#include <LibIPC/ConnectionFromClient.h>
+#include <Loom/WindowServerConnectionProxy.h>
 #include <WindowServer/ScreenLayout.h>
-#include <WindowServer/WindowClientEndpoint.h>
 #include <WindowServer/WindowServerEndpoint.h>
 
 namespace Loom {
 
-class WindowServerCallbacks
-    : public RefCounted<WindowServerCallbacks>,
-      public WindowServerEndpoint::Stub {
-};
-
-class WindowServerConnectionProxy final
-    : public IPC::ConnectionFromClient<WindowClientEndpoint, WindowServerEndpoint>  {
-    C_OBJECT(WindowServerConnectionProxy);
+class WindowServerCallbacksMacOS final : public WindowServerCallbacks {
 public:
-    virtual ~WindowServerConnectionProxy() override;
-    void set_callbacks(NonnullRefPtr<WindowServerCallbacks>);
+    virtual ~WindowServerCallbacksMacOS() override = default;
 
-private:
-
-    WindowServerConnectionProxy(NonnullOwnPtr<Core::LocalSocket>, int client_id);
-
-    // ^ConnectionFromClient
-    virtual void die() override;
-    virtual void may_have_become_unresponsive() override;
-    virtual void did_become_responsive() override;
     virtual void create_menu(i32, String const&, i32) override;
     virtual void set_menu_name(i32, String const&) override;
     virtual void set_menu_minimum_width(i32, i32) override;
@@ -137,8 +118,6 @@ private:
     virtual void remove_window_stealing(i32) override;
     virtual void set_always_on_top(i32, bool) override;
     virtual Messages::WindowServer::GetColorUnderCursorResponse get_color_under_cursor() override;
-
-    RefPtr<WindowServerCallbacks> m_callbacks;
 };
 
 }

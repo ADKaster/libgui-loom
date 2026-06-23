@@ -11,10 +11,14 @@
 namespace Loom
 {
 
-IPCBridge::IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> clipboard_server)
-    : m_window_server(move(window_server))
+IPCBridge::IPCBridge(NonnullRefPtr<WindowServerCallbacks> callbacks, NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> clipboard_server)
+    : m_window_server_callbacks(move(callbacks))
+    , m_window_server(move(window_server))
     , m_clipboard_server(move(clipboard_server))
 {
+    m_window_server->on_new_client = [this](WindowServerConnectionProxy& client) {
+        client.set_callbacks(m_window_server_callbacks);
+    };
 }
 
 IPCBridge::~IPCBridge() = default;
@@ -49,7 +53,7 @@ static ErrorOr<int> create_ipc_socket(ByteString const& socket_path)
     return socket_fd;
 }
 
-NonnullOwnPtr<IPCBridge> IPCBridge::create()
+NonnullOwnPtr<IPCBridge> IPCBridge::create(NonnullRefPtr<WindowServerCallbacks> callbacks)
 {
     MUST(Core::Directory::create("/tmp/portal"sv, Core::Directory::CreateDirectories::Yes));
     MUST(Core::Directory::create("/tmp/session/0/portal"sv, Core::Directory::CreateDirectories::Yes));
@@ -64,7 +68,7 @@ NonnullOwnPtr<IPCBridge> IPCBridge::create()
     MUST(clipboard_server_server->take_over_fd(clipboard_server_socket));
     auto clipboard_server = MUST(IPC::MultiServer<ClipboardConnectionProxy>::try_create(move(clipboard_server_server)));
 
-    return adopt_own(*new IPCBridge(move(window_server), move(clipboard_server)));
+    return adopt_own(*new IPCBridge(move(callbacks), move(window_server), move(clipboard_server)));
 }
 
 }
