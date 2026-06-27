@@ -34,7 +34,7 @@
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication*)sender
 {
     (void)sender;
-    return YES;
+    return NO;
 }
 
 @end
