@@ -10,12 +10,20 @@
 
 namespace Loom {
 
+static HashMap<int, NonnullRefPtr<ClipboardConnectionProxy>>* s_connections;
+
 ClipboardConnectionProxy::ClipboardConnectionProxy(NonnullOwnPtr<Core::LocalSocket> socket, int client_id)
     : IPC::ConnectionFromClient<ClipboardClientEndpoint, ClipboardServerEndpoint>(*this, move(socket), client_id)
 {
+    if (!s_connections)
+        s_connections = new HashMap<int, NonnullRefPtr<ClipboardConnectionProxy>>;
+    s_connections->set(client_id, *this);
 }
 
-ClipboardConnectionProxy::~ClipboardConnectionProxy() = default;
+ClipboardConnectionProxy::~ClipboardConnectionProxy()
+{
+    s_connections->remove(this->client_id());
+}
 
 void ClipboardConnectionProxy::die()
 {

@@ -19,6 +19,7 @@ class WindowServerCallbacks
     : public RefCounted<WindowServerCallbacks>,
       public WindowServerEndpoint::Stub {
 public:
+    virtual void die() = 0;
     Function<void(char const*)> on_misbehave;
 };
 

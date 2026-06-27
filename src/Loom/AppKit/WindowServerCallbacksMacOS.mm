@@ -30,6 +30,14 @@ WindowServerCallbacksMacOS::WindowServerCallbacksMacOS()
     m_impl->windows = [[NSMutableDictionary alloc] init];
 }
 
+void WindowServerCallbacksMacOS::die()
+{
+    [m_impl->windows enumerateKeysAndObjectsUsingBlock:^(id, id obj, BOOL*) {
+        auto* window = (WindowController*)obj;
+        [window close];
+    }];
+}
+
 void WindowServerCallbacksMacOS::create_menu(i32, String const&, i32)
 {
 }
@@ -94,6 +102,11 @@ void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gf
     [new_window showWindow:nil];
     [[new_window window] setFrame:gfx_rect_to_ns_rect(rect)
                           display:YES];
+
+    if (auto_position) {
+        [[new_window window] center];
+    }
+
     [[new_window window] setTitle:[NSString stringWithUTF8String:title.characters()]];
     [[new_window window] setOpaque:!has_alpha_channel];
     [[new_window window] setAlphaValue:has_alpha_channel ? 0.5 : 1.0];

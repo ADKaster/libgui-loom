@@ -19,6 +19,7 @@ public:
 
 private:
 
+    virtual void die() override;
     virtual void create_menu(i32, String const&, i32) override;
     virtual void set_menu_name(i32, String const&) override;
     virtual void set_menu_minimum_width(i32, i32) override;

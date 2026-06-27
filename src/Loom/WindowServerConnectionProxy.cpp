@@ -12,7 +12,7 @@
 
 namespace Loom {
 
-HashMap<int, NonnullRefPtr<WindowServerConnectionProxy>>* s_connections;
+static HashMap<int, NonnullRefPtr<WindowServerConnectionProxy>>* s_connections;
 
 WindowServerConnectionProxy::WindowServerConnectionProxy(NonnullOwnPtr<Core::LocalSocket> socket, int client_id)
     : IPC::ConnectionFromClient<WindowClientEndpoint, WindowServerEndpoint>(*this, move(socket), client_id)
@@ -37,11 +37,15 @@ void WindowServerConnectionProxy::set_callbacks(NonnullRefPtr<WindowServerCallba
     };
 }
 
-WindowServerConnectionProxy::~WindowServerConnectionProxy() = default;
+WindowServerConnectionProxy::~WindowServerConnectionProxy()
+{
+    s_connections->remove(this->client_id());
+}
 
 void WindowServerConnectionProxy::die()
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: die()");
+    m_callbacks->die();
 }
 
 void WindowServerConnectionProxy::may_have_become_unresponsive()
