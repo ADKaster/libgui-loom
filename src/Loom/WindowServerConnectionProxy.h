@@ -18,6 +18,8 @@ namespace Loom {
 class WindowServerCallbacks
     : public RefCounted<WindowServerCallbacks>,
       public WindowServerEndpoint::Stub {
+public:
+    Function<void(char const*)> on_misbehave;
 };
 
 class WindowServerConnectionProxy final

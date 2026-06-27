@@ -29,6 +29,12 @@ WindowServerConnectionProxy::WindowServerConnectionProxy(NonnullOwnPtr<Core::Loc
 void WindowServerConnectionProxy::set_callbacks(NonnullRefPtr<WindowServerCallbacks> callbacks)
 {
     m_callbacks = move(callbacks);
+    m_callbacks->on_misbehave = [this](char const* message) {
+        if (message)
+            this->did_misbehave(message);
+        else
+            this->did_misbehave();
+    };
 }
 
 WindowServerConnectionProxy::~WindowServerConnectionProxy() = default;

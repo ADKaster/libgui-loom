@@ -4,9 +4,31 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "CocoaWrapper.h"
+
+#include "Conversions.h"
 #include "WindowServerCallbacksMacOS.h"
+#include "WindowController.h"
 
 namespace Loom {
+
+struct WindowServerCallbacksMacOS::Impl
+{
+    NSMutableDictionary* windows;
+
+    [[nodiscard]] WindowController* window_for_id(i32 window_id) const
+    {
+        return (WindowController*)[windows objectForKey:[NSNumber numberWithInt:window_id]];
+    }
+};
+
+WindowServerCallbacksMacOS::~WindowServerCallbacksMacOS() = default;
+
+WindowServerCallbacksMacOS::WindowServerCallbacksMacOS()
+    : m_impl(make<Impl>())
+{
+    m_impl->windows = [[NSMutableDictionary alloc] init];
+}
 
 void WindowServerCallbacksMacOS::create_menu(i32, String const&, i32)
 {
@@ -50,6 +72,33 @@ void WindowServerCallbacksMacOS::flash_menubar_menu(i32, i32)
 
 void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gfx::IntRect const& rect, bool auto_position, bool has_alpha_channel, bool minimizable, bool closeable, bool resizable, bool fullscreen, bool frameless, bool forced_shadow, float alpha_hit_threshold, Gfx::IntSize base_size, Gfx::IntSize size_increment, Gfx::IntSize minimum_size, Optional<Gfx::IntSize> const& resize_aspect_ratio, i32 type, i32 mode, ByteString const& title, i32 parent_window_id, Gfx::IntRect const& launch_origin_rect)
 {
+    (void)process_id;
+    (void)auto_position;
+    (void)fullscreen;
+    (void)frameless;
+    (void)forced_shadow;
+    (void)alpha_hit_threshold;
+    (void)base_size;
+    (void)size_increment;
+    (void)resize_aspect_ratio;
+    (void)type;
+    (void)mode;
+    (void)parent_window_id;
+    (void)launch_origin_rect;
+
+    auto* new_window = [[WindowController alloc] init];
+
+    [m_impl->windows setObject:new_window
+                        forKey:[NSNumber numberWithInt:window_id]];
+
+    [new_window showWindow:nil];
+    [[new_window window] setFrame:gfx_rect_to_ns_rect(rect)
+                          display:YES];
+    [[new_window window] setTitle:[NSString stringWithUTF8String:title.characters()]];
+    [[new_window window] setOpaque:!has_alpha_channel];
+    [[new_window window] setAlphaValue:has_alpha_channel ? 0.5 : 1.0];
+    [[new_window window] setMinSize:gfx_size_to_ns_size(minimum_size)];
+    [[new_window window] setStyleMask:[[new_window window] styleMask] | (resizable ? NSWindowStyleMaskResizable : 0) | (closeable ? NSWindowStyleMaskClosable : 0) | (minimizable ? NSWindowStyleMaskMiniaturizable : 0)];
 }
 
 Messages::WindowServer::DestroyWindowResponse WindowServerCallbacksMacOS::destroy_window(i32)
@@ -57,12 +106,22 @@ Messages::WindowServer::DestroyWindowResponse WindowServerCallbacksMacOS::destro
     return nullptr;
 }
 
-void WindowServerCallbacksMacOS::set_window_title(i32, ByteString const&)
+void WindowServerCallbacksMacOS::set_window_title(i32 window_id, ByteString const& title)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        [[window window] setTitle:string_to_ns_string(title)];
+    } else {
+        on_misbehave("SetWindowTitle: Bad Window ID");
+    }
 }
 
-Messages::WindowServer::GetWindowTitleResponse WindowServerCallbacksMacOS::get_window_title(i32)
+Messages::WindowServer::GetWindowTitleResponse WindowServerCallbacksMacOS::get_window_title(i32 window_id)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        NSString* title = [[window window] title];
+        return ns_string_to_byte_string(title);
+    }
+    on_misbehave("GetWindowTitle: Bad Window ID");
     return nullptr;
 }
 
@@ -93,8 +152,13 @@ Messages::WindowServer::SetWindowRectResponse WindowServerCallbacksMacOS::set_wi
     return nullptr;
 }
 
-Messages::WindowServer::GetWindowRectResponse WindowServerCallbacksMacOS::get_window_rect(i32)
+Messages::WindowServer::GetWindowRectResponse WindowServerCallbacksMacOS::get_window_rect(i32 window_id)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        NSRect frame = [[window window] frame];
+        return ns_rect_to_gfx_rect(frame);
+    }
+    on_misbehave("GetWindowRect: Bad Window ID");
     return nullptr;
 }
 

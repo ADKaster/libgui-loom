@@ -14,7 +14,10 @@ namespace Loom {
 
 class WindowServerCallbacksMacOS final : public WindowServerCallbacks {
 public:
-    virtual ~WindowServerCallbacksMacOS() override = default;
+    virtual ~WindowServerCallbacksMacOS() override;
+    WindowServerCallbacksMacOS();
+
+private:
 
     virtual void create_menu(i32, String const&, i32) override;
     virtual void set_menu_name(i32, String const&) override;
@@ -118,6 +121,9 @@ public:
     virtual void remove_window_stealing(i32) override;
     virtual void set_always_on_top(i32, bool) override;
     virtual Messages::WindowServer::GetColorUnderCursorResponse get_color_under_cursor() override;
+
+    struct Impl;
+    OwnPtr<Impl> m_impl;
 };
 
 }

@@ -5,8 +5,10 @@ if (APPLE)
         AppKit/main.mm
         AppKit/Application.mm
         AppKit/ApplicationDelegate.mm
+        AppKit/Conversions.mm
         AppKit/ScreenLayout.mm
         AppKit/EventLoopImplementation.mm
+        AppKit/WindowController.mm
         AppKit/WindowServerCallbacksMacOS.mm
     )
 
