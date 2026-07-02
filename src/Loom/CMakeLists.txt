@@ -1,5 +1,8 @@
 
 if (APPLE)
+
+    find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+
     add_executable(Loom
         MACOSX_BUNDLE
         AppKit/main.mm
@@ -10,10 +13,6 @@ if (APPLE)
         AppKit/EventLoopImplementation.mm
         AppKit/WindowController.mm
         AppKit/WindowServerCallbacksMacOS.mm
-    )
-
-    target_include_directories(Loom BEFORE PRIVATE
-        ${PROJECT_SOURCE_DIR}/extras
     )
 
     target_link_libraries(Loom PRIVATE ${APPKIT_FRAMEWORK})
