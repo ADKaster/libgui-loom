@@ -10,6 +10,8 @@
 
 @interface WindowController : NSWindowController <NSWindowDelegate>
 
-- (instancetype)init;
+@property (nonatomic, assign) int windowID;
+
+- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id;
 
 @end

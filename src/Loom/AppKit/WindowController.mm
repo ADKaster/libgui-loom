@@ -5,6 +5,7 @@
  */
 
 #include "WindowController.h"
+#include "WindowViewController.h"
 
 @interface WindowController () <NSToolbarDelegate>;
 
@@ -14,9 +15,10 @@
 
 @implementation WindowController
 
-- (instancetype)init
+- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id
 {
     if (self = [super init]) {
+        self.windowID = id;
         self.toolbar = [[NSToolbar alloc] initWithIdentifier:@"Toolbar"];
         [self.toolbar setDelegate:self];
         [self.toolbar setDisplayMode:NSToolbarDisplayModeIconOnly];
@@ -27,22 +29,16 @@
         }
         [self.toolbar setAllowsUserCustomization:NO];
         [self.toolbar setSizeMode:NSToolbarSizeModeRegular];
+
+        auto* viewController = [[WindowViewController alloc] initWithFrame:contentRect];
+
+        self.window = [NSWindow windowWithContentViewController:viewController];
+        [self.window setDelegate:self];
+
+        [self.window setToolbar:self.toolbar];
+        [self.window setToolbarStyle:NSWindowToolbarStyleUnified];
     }
     return self;
-}
-
-#pragma mark - NSWindowController
-
-- (IBAction)showWindow:(id)sender
-{
-    self.window = [[NSWindow alloc] init];
-
-    [self.window setDelegate:self];
-
-    [self.window setToolbar:self.toolbar];
-    [self.window setToolbarStyle:NSWindowToolbarStyleUnified];
-
-    [self.window makeKeyAndOrderFront:sender];
 }
 
 @end

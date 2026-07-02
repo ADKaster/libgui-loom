@@ -94,14 +94,14 @@ void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gf
     (void)parent_window_id;
     (void)launch_origin_rect;
 
-    auto* new_window = [[WindowController alloc] init];
+
+    // FIXME: Do math to reconcile 'rect_when_windowless' with 'system recommended window size'
+    //        Ref: WindowServer's CreateWindow callback
+    auto* new_window = [[WindowController alloc] initWithContentRect:gfx_rect_to_ns_rect(rect)
+                                                            windowID:window_id];
 
     [m_impl->windows setObject:new_window
                         forKey:[NSNumber numberWithInt:window_id]];
-
-    [new_window showWindow:nil];
-    [[new_window window] setFrame:gfx_rect_to_ns_rect(rect)
-                          display:YES];
 
     if (auto_position) {
         [[new_window window] center];
@@ -111,7 +111,27 @@ void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gf
     [[new_window window] setOpaque:!has_alpha_channel];
     [[new_window window] setAlphaValue:has_alpha_channel ? 0.5 : 1.0];
     [[new_window window] setMinSize:gfx_size_to_ns_size(minimum_size)];
-    [[new_window window] setStyleMask:[[new_window window] styleMask] | (resizable ? NSWindowStyleMaskResizable : 0) | (closeable ? NSWindowStyleMaskClosable : 0) | (minimizable ? NSWindowStyleMaskMiniaturizable : 0)];
+
+    NSWindowStyleMask style_mask = [[new_window window] styleMask];
+    
+    if (resizable)
+        style_mask |= NSWindowStyleMaskResizable;
+    else
+        style_mask &= ~NSWindowStyleMaskResizable;
+    
+    if (closeable)
+        style_mask |= NSWindowStyleMaskClosable;
+    else
+        style_mask &= ~NSWindowStyleMaskClosable;
+    
+    if (minimizable)
+        style_mask |= NSWindowStyleMaskMiniaturizable;
+    else
+        style_mask &= ~NSWindowStyleMaskMiniaturizable;
+    
+    [[new_window window] setStyleMask:style_mask];
+
+    [[new_window window] makeKeyAndOrderFront:nil];
 }
 
 Messages::WindowServer::DestroyWindowResponse WindowServerCallbacksMacOS::destroy_window(i32)

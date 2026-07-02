@@ -13,6 +13,8 @@ if (APPLE)
         AppKit/EventLoopImplementation.mm
         AppKit/WindowController.mm
         AppKit/WindowServerCallbacksMacOS.mm
+        AppKit/WindowView.mm
+        AppKit/WindowViewController.mm
     )
 
     target_link_libraries(Loom PRIVATE ${APPKIT_FRAMEWORK})
