@@ -2,4 +2,4 @@
 add_executable(BasicApp
     main.cpp
 )
-target_link_libraries(BasicApp PRIVATE LibMain LibGUI LibGfx)
+target_link_libraries(BasicApp PRIVATE LibMain LibGUI LibGfx serenity_resources)
