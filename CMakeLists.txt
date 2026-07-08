@@ -218,27 +218,6 @@ lagom_lib(LibGUI_GML gui_gml
 
 add_serenity_subdirectory(Meta/Lagom/Tools/CodeGenerators)
 
-set(libs
-    Config
-    Compress
-    Crypto
-    Desktop
-    ELF
-    Gfx
-    IPC
-    ImageDecoderClient
-    Regex
-    RIFF
-    Syntax
-    TextCodec
-    Threading
-    Unicode
-)
-
-foreach(lib IN LISTS libs)
-    add_serenity_subdirectory("Userland/Libraries/Lib${lib}")
-endforeach()
-
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/Clipboard/ClipboardClient.ipc Userland/Services/Clipboard/ClipboardClientEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/Clipboard/ClipboardServer.ipc Userland/Services/Clipboard/ClipboardServerEndpoint.h)
 
@@ -256,7 +235,27 @@ compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowClient.i
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowManagerServer.ipc Userland/Services/WindowServer/WindowManagerServerEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowManagerClient.ipc Userland/Services/WindowServer/WindowManagerClientEndpoint.h)
 
-add_serenity_subdirectory(Userland/Libraries/LibGUI)
+set(libs
+    Config
+    Compress
+    Crypto
+    Desktop
+    ELF
+    Gfx
+    GUI
+    IPC
+    ImageDecoderClient
+    Regex
+    RIFF
+    Syntax
+    TextCodec
+    Threading
+    Unicode
+)
+
+foreach(lib IN LISTS libs)
+    add_serenity_subdirectory("Userland/Libraries/Lib${lib}")
+endforeach()
 
 add_subdirectory(src)
 
