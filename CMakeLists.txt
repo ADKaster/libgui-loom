@@ -103,6 +103,75 @@ endfunction()
 function(serenity_install_sources dir)
 endfunction()
 
+function(serenity_app target_name)
+    cmake_parse_arguments(PARSE_ARGV 1 SERENITY_APP "" "ICON" "")
+
+    set(small_icon "${SerenityOS_SOURCE_DIR}/Base/res/icons/16x16/${SERENITY_APP_ICON}.png")
+    set(medium_icon "${SerenityOS_SOURCE_DIR}/Base/res/icons/32x32/${SERENITY_APP_ICON}.png")
+
+    add_executable(${target_name} ${SOURCES})
+    serenity_generated_sources(${target_name})
+
+    if (NOT EXISTS "${small_icon}")
+        message(FATAL_ERROR "Missing small app icon: ${small_icon}")
+    endif()
+
+    if (NOT EXISTS "${medium_icon}")
+        # These icons are designed small only for use in applets, and thus are exempt.
+        list(APPEND allowed_missing_medium_icons "audio-volume-high")
+        list(APPEND allowed_missing_medium_icons "edit-copy")
+
+        if (NOT ${SERENITY_APP_ICON} IN_LIST allowed_missing_medium_icons)
+            message(FATAL_ERROR "Missing medium app icon: ${medium_icon}")
+        endif()
+    endif()
+
+    # FIXME: Create lists of 'required resources' per app and copy them into the app bundle
+    target_link_libraries(${target_name} PRIVATE serenity_resources)
+
+    set_target_properties(${target_name} PROPERTIES
+        MACOSX_BUNDLE_GUI_IDENTIFIER "org.SerenityOS.${target_name}"
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        MACOSX_BUNDLE TRUE
+        WIN32_EXECUTABLE TRUE
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.SerenityOS.${target_name}"
+    )
+
+    if (APPLE)
+        find_program(ICONUTIL iconutil)
+        find_program(MAGICK magick)
+        if (ICONUTIL AND MAGICK)
+            # FIXME: We could probably just write a python script to do all of this
+            add_custom_command(OUTPUT "app_icon.icns"
+                COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset"
+                COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${small_icon}" "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_16x16.png"
+                COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${medium_icon}" "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_16x16@2x.png"
+                COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${medium_icon}" "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_32x32.png"
+                COMMAND "${MAGICK}" "${medium_icon}" -resize 64x64\! -filter point "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_32x32@2x.png"
+                COMMAND "${MAGICK}" "${medium_icon}" -resize 128x128\! -filter point "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_128x128.png"
+                COMMAND "${MAGICK}" "${medium_icon}" -resize 256x256\! -filter point "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_128x128@2x.png"
+                COMMAND "${MAGICK}" "${medium_icon}" -resize 256x256\! -filter point "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_256x256.png"
+                COMMAND "${MAGICK}" "${medium_icon}" -resize 512x512\! -filter point "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_256x256@2x.png"
+                COMMAND "${MAGICK}" "${medium_icon}" -resize 512x512\! -filter point "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_512x512.png"
+                COMMAND "${MAGICK}" "${medium_icon}" -resize 1024x1024\! -filter point "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset/icon_512x512@2x.png"
+                COMMAND "${ICONUTIL}" --convert icns "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.iconset" --output "${CMAKE_CURRENT_BINARY_DIR}/app_icon.tmp.icns"
+                COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/app_icon.tmp.icns" "${CMAKE_CURRENT_BINARY_DIR}/app_icon.icns"
+                VERBATIM
+                DEPENDS "${small_icon}" "${medium_icon}"
+            )
+            add_custom_target("${target_name}_icon" DEPENDS "app_icon.icns")
+            add_dependencies(${target_name} "${target_name}_icon")
+
+            target_sources("${target_name}" PRIVATE "app_icon.icns")
+            set_source_files_properties("app_icon.icns" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+        endif()
+
+        configure_file("${libgui_loom_SOURCE_DIR}/meta/Info.plist.in" "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" @ONLY)
+        set_target_properties(${target_name} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist")
+    endif()
+endfunction()
+
 macro(add_serenity_subdirectory path)
     add_subdirectory("${SERENITY_SOURCE_DIR}/${path}" "${CMAKE_CURRENT_BINARY_DIR}/${path}")
 endmacro()
