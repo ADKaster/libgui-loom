@@ -106,7 +106,7 @@ void WindowServerCallbacksMacOS::flash_menubar_menu(i32, i32)
 {
 }
 
-void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gfx::IntRect const& rect, bool auto_position, bool has_alpha_channel, bool minimizable, bool closeable, bool resizable, bool fullscreen, bool frameless, bool forced_shadow, float alpha_hit_threshold, Gfx::IntSize base_size, Gfx::IntSize size_increment, Gfx::IntSize minimum_size, Optional<Gfx::IntSize> const& resize_aspect_ratio, i32 type, i32 mode, ByteString const& title, i32 parent_window_id, Gfx::IntRect const& launch_origin_rect)
+void WindowServerCallbacksMacOS::create_window(WindowServerConnectionProxy& owner, i32 window_id, i32 process_id, Gfx::IntRect const& rect, bool auto_position, bool has_alpha_channel, bool minimizable, bool closeable, bool resizable, bool fullscreen, bool frameless, bool forced_shadow, float alpha_hit_threshold, Gfx::IntSize base_size, Gfx::IntSize size_increment, Gfx::IntSize minimum_size, Optional<Gfx::IntSize> const& resize_aspect_ratio, i32 type, i32 mode, ByteString const& title, i32 parent_window_id, Gfx::IntRect const& launch_origin_rect)
 {
     (void)process_id;
     (void)auto_position;
@@ -127,7 +127,7 @@ void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gf
     //        Ref: WindowServer's CreateWindow callback
     auto* new_window = [[WindowController alloc] initWithContentRect:gfx_rect_to_ns_rect(rect)
                                                             windowID:window_id
-                                                            clientID:process_id];
+                                                            connection:&owner];
 
     [m_impl->windows setObject:new_window
                         forKey:[NSNumber numberWithInt:window_id]];
@@ -304,39 +304,29 @@ void WindowServerCallbacksMacOS::set_global_mouse_tracking(bool)
 {
 }
 
-void WindowServerCallbacksMacOS::set_window_backing_store(i32 window_id, i32, i32 pitch, IPC::File const& anon_file, i32 serial, bool has_alpha_channel, Gfx::IntSize size, Gfx::IntSize visible_size, bool flush_immediately)
+void WindowServerCallbacksMacOS::set_window_backing_store(i32 window_id, i32, i32 pitch, IPC::File const& anon_file, i32, bool has_alpha_channel, Gfx::IntSize size, Gfx::IntSize visible_size, bool flush_immediately)
 {
     if (auto* window = m_impl->window_for_id(window_id)) {
         window.backingStoreHasAlpha = has_alpha_channel;
         window.backingStoreVisibleSize = gfx_size_to_ns_size(visible_size);
 
-        if (window.lastBackingStoreSerial == serial) {
-            auto* current_image = window.backingStoreImage;
-            window.backingStoreImage = window.lastBackingStoreImage;
-            window.lastBackingStoreImage = current_image;
-            window.backingStoreSerial = serial;
-        } else {
-            auto buffer_or_error = Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), pitch * size.height());
-            if (buffer_or_error.is_error()) {
-                on_misbehave("SetWindowBackingStore: Failed to create anonymous buffer");
-                return;
-            }
-
-            auto bitmap_or_error = Gfx::Bitmap::create_with_anonymous_buffer(
-                has_alpha_channel ? Gfx::BitmapFormat::BGRA8888 : Gfx::BitmapFormat::BGRx8888,
-                buffer_or_error.release_value(),
-                size,
-                1);
-            if (bitmap_or_error.is_error()) {
-                on_misbehave("SetWindowBackingStore: Failed to create bitmap");
-                return;
-            }
-
-            window.lastBackingStoreImage = window.backingStoreImage;
-            window.backingStoreImage = gfx_bitmap_to_ns_image(bitmap_or_error.release_value());
-            window.lastBackingStoreSerial = window.backingStoreSerial;
-            window.backingStoreSerial = serial;
+        auto buffer_or_error = Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), pitch * size.height());
+        if (buffer_or_error.is_error()) {
+            on_misbehave("SetWindowBackingStore: Failed to create anonymous buffer");
+            return;
         }
+
+        auto bitmap_or_error = Gfx::Bitmap::create_with_anonymous_buffer(
+            has_alpha_channel ? Gfx::BitmapFormat::BGRA8888 : Gfx::BitmapFormat::BGRx8888,
+            buffer_or_error.release_value(),
+            size,
+            1);
+        if (bitmap_or_error.is_error()) {
+            on_misbehave("SetWindowBackingStore: Failed to create bitmap");
+            return;
+        }
+
+        [window setBackingStoreBitmap:bitmap_or_error.release_value()];
 
         auto* content_view = content_view_for_window(window);
         if (!content_view) {
@@ -347,6 +337,9 @@ void WindowServerCallbacksMacOS::set_window_backing_store(i32 window_id, i32, i3
             [content_view setNeedsDisplay:YES];
         else
             [content_view setNeedsDisplayInRect:content_view.bounds];
+        // AppKit otherwise tends to coalesce these swaps until later in the run loop,
+        // which drops short-lived press-state frames from the client.
+        [content_view displayIfNeeded];
         return;
     }
 

@@ -170,13 +170,15 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
     }
 }
 
-@implementation WindowController
+@implementation WindowController {
+    RefPtr<Gfx::Bitmap> _backing_store_bitmap;
+}
 
-- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id clientID:(int)clientID
+- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id connection:(Loom::WindowServerConnectionProxy*)connection
 {
     if (self = [super init]) {
         self.windowID = id;
-        self.clientID = clientID;
+        self.connection = connection;
         self.serenityContentSize = contentRect.size;
 
         auto* viewController = [[WindowViewController alloc] initWithFrame:contentRect];
@@ -203,9 +205,21 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
     return self;
 }
 
+- (void)setBackingStoreBitmap:(RefPtr<Gfx::Bitmap>)bitmap
+{
+    _backing_store_bitmap = move(bitmap);
+}
+
 - (Loom::WindowServerConnectionProxy*)windowServerConnection
 {
-    return Loom::WindowServerConnectionProxy::for_client_id(self.clientID);
+    return self.connection;
+}
+
+- (NSImage*)backingStoreImage
+{
+    if (!_backing_store_bitmap)
+        return nil;
+    return Loom::gfx_bitmap_to_ns_image(*_backing_store_bitmap);
 }
 
 - (void)contentView:(ContentView*)contentView didReceiveEvent:(NSEvent*)event
@@ -219,7 +233,10 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
     auto* windowView = (WindowView*)self.window.contentView;
     auto* content = windowView.contentView;
     auto const location = [content convertPoint:event.locationInWindow fromView:nil];
-    auto const position = Loom::ns_point_to_gfx_point(location);
+    auto const position = Gfx::IntPoint {
+        static_cast<int>(location.x),
+        static_cast<int>(content.bounds.size.height - location.y),
+    };
 
     switch (event.type) {
     case NSEventTypeMouseMoved:
@@ -235,11 +252,9 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
         if (button == 0u)
             break;
 
-        if (event.clickCount >= 2) {
+        connection->async_mouse_down(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
+        if (event.clickCount >= 2)
             connection->async_mouse_double_click(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
-        } else {
-            connection->async_mouse_down(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
-        }
         break;
     }
     case NSEventTypeLeftMouseDragged:

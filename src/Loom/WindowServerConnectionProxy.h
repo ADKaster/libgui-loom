@@ -15,12 +15,20 @@
 
 namespace Loom {
 
+class WindowServerConnectionProxy;
+
 class WindowServerCallbacks
     : public RefCounted<WindowServerCallbacks>,
       public WindowServerEndpoint::Stub {
 public:
     virtual void die() = 0;
     Function<void(char const*)> on_misbehave;
+    virtual void create_window(i32, i32, Gfx::IntRect const&, bool, bool, bool,
+        bool, bool, bool, bool, bool, float, Gfx::IntSize, Gfx::IntSize, Gfx::IntSize,
+        Optional<Gfx::IntSize> const&, i32, i32, ByteString const&, i32, Gfx::IntRect const&) override { }
+    virtual void create_window(WindowServerConnectionProxy&, i32, i32, Gfx::IntRect const&, bool, bool, bool,
+        bool, bool, bool, bool, bool, float, Gfx::IntSize, Gfx::IntSize, Gfx::IntSize,
+        Optional<Gfx::IntSize> const&, i32, i32, ByteString const&, i32, Gfx::IntRect const&) = 0;
 };
 
 class WindowServerConnectionProxy final
@@ -53,6 +61,7 @@ private:
     virtual void create_window(i32, i32, Gfx::IntRect const&, bool, bool, bool,
         bool, bool, bool, bool, bool, float, Gfx::IntSize, Gfx::IntSize, Gfx::IntSize,
         Optional<Gfx::IntSize> const&, i32, i32, ByteString const&, i32, Gfx::IntRect const&) override;
+
     virtual Messages::WindowServer::DestroyWindowResponse destroy_window(i32) override;
     virtual void set_window_title(i32, ByteString const&) override;
     virtual Messages::WindowServer::GetWindowTitleResponse get_window_title(i32) override;
