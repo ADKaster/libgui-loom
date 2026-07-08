@@ -222,6 +222,7 @@ set(libs
     Config
     Compress
     Crypto
+    Desktop
     ELF
     Gfx
     IPC
@@ -244,6 +245,9 @@ compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/Clipboard/ClipboardServer.i
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/ConfigServer/ConfigClient.ipc Userland/Services/ConfigServer/ConfigClientEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/ConfigServer/ConfigServer.ipc Userland/Services/ConfigServer/ConfigServerEndpoint.h)
 
+compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/LaunchServer/LaunchClient.ipc Userland/Services/LaunchServer/LaunchClientEndpoint.h)
+compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/LaunchServer/LaunchServer.ipc Userland/Services/LaunchServer/LaunchServerEndpoint.h)
+
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/NotificationServer/NotificationClient.ipc Userland/Services/NotificationServer/NotificationClientEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/NotificationServer/NotificationServer.ipc Userland/Services/NotificationServer/NotificationServerEndpoint.h)
 
@@ -255,3 +259,5 @@ compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/WindowServer/WindowManagerC
 add_serenity_subdirectory(Userland/Libraries/LibGUI)
 
 add_subdirectory(src)
+
+add_serenity_subdirectory(Userland/Applications/Calculator)
