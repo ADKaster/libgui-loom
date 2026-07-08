@@ -20,14 +20,12 @@ LaunchServerConnectionProxy::LaunchServerConnectionProxy(NonnullOwnPtr<Core::Loc
     s_connections->set(client_id, *this);
 }
 
-LaunchServerConnectionProxy::~LaunchServerConnectionProxy()
-{
-    s_connections->remove(this->client_id());
-}
+LaunchServerConnectionProxy::~LaunchServerConnectionProxy() = default;
 
 void LaunchServerConnectionProxy::die()
 {
     dbgln_if(LAUNCHSERVER_IPC_DEBUG, "LaunchServer IPC: die()");
+    s_connections->remove(this->client_id());
 }
 
 Messages::LaunchServer::OpenUrlResponse LaunchServerConnectionProxy::open_url(URL::URL const& url, ByteString const& handler_name)

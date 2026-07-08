@@ -37,15 +37,13 @@ void WindowServerConnectionProxy::set_callbacks(NonnullRefPtr<WindowServerCallba
     };
 }
 
-WindowServerConnectionProxy::~WindowServerConnectionProxy()
-{
-    s_connections->remove(this->client_id());
-}
+WindowServerConnectionProxy::~WindowServerConnectionProxy() = default;
 
 void WindowServerConnectionProxy::die()
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: die()");
     m_callbacks->die();
+    s_connections->remove(this->client_id());
 }
 
 void WindowServerConnectionProxy::may_have_become_unresponsive()
