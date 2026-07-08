@@ -6,6 +6,7 @@
 
 #include "WindowView.h"
 
+#include "ContentView.h"
 #include "IconBag.h"
 #include "Window.h"
 #include "Conversions.h"
@@ -237,6 +238,7 @@ static NSTextAlignment ns_text_alignment_from_serenity(Gfx::TextAlignment alignm
     [super viewDidMoveToWindow];
     self.window.acceptsMouseMovedEvents = YES;
     [self updateChromeAppearance];
+    [self layoutContentView];
     [self configureTitlebarButtons];
     [self layoutTitlebarButtons];
     [self setNeedsDisplay:YES];
@@ -258,6 +260,28 @@ static NSTextAlignment ns_text_alignment_from_serenity(Gfx::TextAlignment alignm
         self.layer.cornerRadius = 0.0;
         self.layer.masksToBounds = NO;
     }
+}
+
+- (void)setContentView:(ContentView*)contentView
+{
+    if (_contentView == contentView)
+        return;
+
+    [_contentView removeFromSuperview];
+    _contentView = contentView;
+
+    if (_contentView) {
+        [self addSubview:_contentView];
+        [self layoutContentView];
+    }
+}
+
+- (void)layoutContentView
+{
+    if (!self.contentView)
+        return;
+
+    self.contentView.frame = [self contentRect];
 }
 
 - (void)configureTitlebarButtons
@@ -295,12 +319,14 @@ static NSTextAlignment ns_text_alignment_from_serenity(Gfx::TextAlignment alignm
 - (void)layout
 {
     [super layout];
+    [self layoutContentView];
     [self layoutTitlebarButtons];
 }
 
 - (void)setFrameSize:(NSSize)newSize
 {
     [super setFrameSize:newSize];
+    [self layoutContentView];
     [self layoutTitlebarButtons];
 }
 
@@ -334,6 +360,17 @@ static NSTextAlignment ns_text_alignment_from_serenity(Gfx::TextAlignment alignm
 {
     _windowIconImage = iconImage;
     [self setNeedsDisplay:YES];
+}
+
+- (NSRect)contentRect
+{
+    auto palette = current_palette();
+    auto const border_thickness = static_cast<CGFloat>(palette.window_border_thickness());
+    auto const titlebar_height = static_cast<CGFloat>(palette.window_title_height());
+
+    auto width = max(0.0, self.bounds.size.width - border_thickness * 2);
+    auto height = max(0.0, self.bounds.size.height - border_thickness * 2 - titlebar_height);
+    return NSMakeRect(border_thickness, border_thickness, width, height);
 }
 
 - (void)drawRect:(NSRect)dirtyRect

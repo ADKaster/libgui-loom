@@ -177,6 +177,7 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
     if (self = [super init]) {
         self.windowID = id;
         self.clientID = clientID;
+        self.serenityContentSize = contentRect.size;
 
         auto* viewController = [[WindowViewController alloc] initWithFrame:contentRect];
 
@@ -192,11 +193,12 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
         [[self.window standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
         [[self.window standardWindowButton:NSWindowZoomButton] setHidden:YES];
 
-        auto* contentView = (ContentView*)viewController.view;
+        auto* windowView = (WindowView*)viewController.view;
+        auto* contentView = windowView.contentView;
         contentView.eventDelegate = self;
-        [(WindowView*)viewController.view configureTitlebarButtons];
-        [viewController.view setNeedsLayout:YES];
-        [self.window makeFirstResponder:viewController.view];
+        [windowView configureTitlebarButtons];
+        [windowView setNeedsLayout:YES];
+        [self.window makeFirstResponder:contentView];
     }
     return self;
 }
@@ -214,7 +216,9 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
     if (!connection)
         return;
 
-    auto const location = [self.window.contentView convertPoint:event.locationInWindow fromView:nil];
+    auto* windowView = (WindowView*)self.window.contentView;
+    auto* content = windowView.contentView;
+    auto const location = [content convertPoint:event.locationInWindow fromView:nil];
     auto const position = Loom::ns_point_to_gfx_point(location);
 
     switch (event.type) {
@@ -321,8 +325,8 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
 {
     (void)notification;
     if (auto* connection = [self windowServerConnection]) {
-        auto content_rect = [self.window contentRectForFrameRect:self.window.frame];
-        connection->async_window_resized(self.windowID, Loom::ns_rect_to_gfx_rect(content_rect));
+        auto* window_view = (WindowView*)self.window.contentView;
+        connection->async_window_resized(self.windowID, Loom::ns_rect_to_gfx_rect([window_view contentRect]));
     }
 }
 

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "WindowView.h"
+#include "CocoaWrapper.h"
 
 @class ContentView;
 
@@ -16,7 +16,7 @@
 
 @end
 
-@interface ContentView : WindowView
+@interface ContentView : NSView
 
 @property (nonatomic, weak) id<ContentViewDelegate> eventDelegate;
 

@@ -5,6 +5,10 @@
  */
 
 #include "ContentView.h"
+#include "Conversions.h"
+#include "WindowController.h"
+
+#include <LibGfx/Palette.h>
 
 @interface ContentView ()
 
@@ -49,6 +53,26 @@
 - (void)forwardEvent:(NSEvent*)event
 {
     [self.eventDelegate contentView:self didReceiveEvent:event];
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    [super drawRect:dirtyRect];
+
+    auto* controller = (WindowController*)self.window.windowController;
+    auto* image = controller.backingStoreImage;
+    if (!image)
+        return;
+
+    auto draw_size = controller.backingStoreVisibleSize;
+    if (draw_size.width <= 0.0 || draw_size.height <= 0.0)
+        draw_size = image.size;
+
+    if (draw_size.width <= 0.0 || draw_size.height <= 0.0)
+        return;
+
+    auto draw_rect = NSMakeRect(0.0, 0.0, draw_size.width, draw_size.height);
+    [image drawInRect:draw_rect fromRect:NSMakeRect(0, 0, draw_size.width, draw_size.height) operation:NSCompositingOperationSourceOver fraction:1.0];
 }
 
 - (void)mouseDown:(NSEvent*)event { [self forwardEvent:event]; }

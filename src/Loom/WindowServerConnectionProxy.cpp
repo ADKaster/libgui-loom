@@ -230,6 +230,14 @@ void WindowServerConnectionProxy::invalidate_rect(i32 window_id, Vector<Gfx::Int
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: invalidate_rect(window_id={}, rects={}, ignore_occlusion={})", window_id, rects, ignore_occlusion);
     m_callbacks->invalidate_rect(window_id, rects, ignore_occlusion);
+
+    auto window_rect = m_callbacks->get_window_rect(window_id);
+    if (!window_rect.valid()) {
+        dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: invalidate_rect(window_id={}) without a window rect", window_id);
+        return;
+    }
+
+    async_paint(window_id, window_rect.rect().size(), rects);
 }
 
 void WindowServerConnectionProxy::did_finish_painting(i32 window_id, Vector<Gfx::IntRect> const& rects)

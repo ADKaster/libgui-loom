@@ -8,6 +8,8 @@
 
 #include "CocoaWrapper.h"
 
+@class ContentView;
+
 @interface WindowView : NSView
 
 - (instancetype)initWithFrame:(NSRect)frameRect;
@@ -15,5 +17,7 @@
 - (void)updateZoomButtonImage;
 - (void)layoutTitlebarButtons;
 - (void)setWindowIconImage:(NSImage*)iconImage;
+- (NSRect)contentRect;
+@property (nonatomic, strong) ContentView* contentView;
 
 @end

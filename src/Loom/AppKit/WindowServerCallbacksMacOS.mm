@@ -7,12 +7,17 @@
 #include "CocoaWrapper.h"
 
 #include "Conversions.h"
+#include "ContentView.h"
 #include "Window.h"
 #include "WindowView.h"
 #include "WindowServerCallbacksMacOS.h"
 #include "WindowController.h"
 
+#include <LibCore/AnonymousBuffer.h>
+#include <LibGfx/Bitmap.h>
+#include <LibGfx/Palette.h>
 #include <LibGfx/ShareableBitmap.h>
+#include <LibGfx/SystemTheme.h>
 
 namespace Loom {
 
@@ -25,6 +30,25 @@ struct WindowServerCallbacksMacOS::Impl
         return (WindowController*)[windows objectForKey:[NSNumber numberWithInt:window_id]];
     }
 };
+
+static ContentView* content_view_for_window(WindowController* window)
+{
+    auto* window_view = window.window.contentView;
+    if (![window_view isKindOfClass:[WindowView class]])
+        return nil;
+    return [(WindowView*)window_view contentView];
+}
+
+static NSRect full_frame_rect_for_content_rect(NSRect content_rect)
+{
+    auto palette = Gfx::Palette(Gfx::PaletteImpl::create_with_anonymous_buffer(Gfx::current_system_theme_buffer()));
+    auto const border_thickness = static_cast<CGFloat>(palette.window_border_thickness());
+    auto const titlebar_height = static_cast<CGFloat>(palette.window_title_height());
+
+    return NSMakeRect(0, 0,
+        content_rect.size.width + border_thickness * 2.0,
+        content_rect.size.height + border_thickness * 2.0 + titlebar_height);
+}
 
 WindowServerCallbacksMacOS::~WindowServerCallbacksMacOS() = default;
 
@@ -198,9 +222,10 @@ Messages::WindowServer::SetWindowRectResponse WindowServerCallbacksMacOS::set_wi
     if (auto* window = m_impl->window_for_id(window_id)) {
         auto* ns_window = [window window];
         auto content_rect = gfx_rect_to_ns_rect(rect);
-        auto frame_rect = [ns_window frameRectForContentRect:content_rect];
+        auto frame_rect = full_frame_rect_for_content_rect(content_rect);
+        window.serenityContentSize = content_rect.size;
         [ns_window setFrame:frame_rect display:YES animate:NO];
-        return ns_rect_to_gfx_rect([ns_window contentRectForFrameRect:[ns_window frame]]);
+        return rect;
     }
     on_misbehave("SetWindowRect: Bad Window ID");
     return nullptr;
@@ -209,9 +234,7 @@ Messages::WindowServer::SetWindowRectResponse WindowServerCallbacksMacOS::set_wi
 Messages::WindowServer::GetWindowRectResponse WindowServerCallbacksMacOS::get_window_rect(i32 window_id)
 {
     if (auto* window = m_impl->window_for_id(window_id)) {
-        auto* ns_window = [window window];
-        NSRect content_rect = [ns_window contentRectForFrameRect:[ns_window frame]];
-        return ns_rect_to_gfx_rect(content_rect);
+        return ns_rect_to_gfx_rect(NSMakeRect(0, 0, window.serenityContentSize.width, window.serenityContentSize.height));
     }
     on_misbehave("GetWindowRect: Bad Window ID");
     return nullptr;
@@ -244,20 +267,90 @@ Messages::WindowServer::GetAppletRectOnScreenResponse WindowServerCallbacksMacOS
     return nullptr;
 }
 
-void WindowServerCallbacksMacOS::invalidate_rect(i32, Vector<Gfx::IntRect> const&, bool)
+void WindowServerCallbacksMacOS::invalidate_rect(i32 window_id, Vector<Gfx::IntRect> const& rects, bool)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        auto* content_view = content_view_for_window(window);
+        if (!content_view) {
+            on_misbehave("InvalidateRect: Missing ContentView");
+            return;
+        }
+        for (auto const& rect : rects)
+            [content_view setNeedsDisplayInRect:gfx_rect_to_ns_rect(rect)];
+        return;
+    }
+
+    on_misbehave("InvalidateRect: Bad Window ID");
 }
 
-void WindowServerCallbacksMacOS::did_finish_painting(i32, Vector<Gfx::IntRect> const&)
+void WindowServerCallbacksMacOS::did_finish_painting(i32 window_id, Vector<Gfx::IntRect> const& rects)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        auto* content_view = content_view_for_window(window);
+        if (!content_view) {
+            on_misbehave("DidFinishPainting: Missing ContentView");
+            return;
+        }
+        for (auto const& rect : rects)
+            [content_view setNeedsDisplayInRect:gfx_rect_to_ns_rect(rect)];
+        [content_view displayIfNeeded];
+        return;
+    }
+
+    on_misbehave("DidFinishPainting: Bad Window ID");
 }
 
 void WindowServerCallbacksMacOS::set_global_mouse_tracking(bool)
 {
 }
 
-void WindowServerCallbacksMacOS::set_window_backing_store(i32, i32, i32, IPC::File const&, i32, bool, Gfx::IntSize, Gfx::IntSize, bool)
+void WindowServerCallbacksMacOS::set_window_backing_store(i32 window_id, i32, i32 pitch, IPC::File const& anon_file, i32 serial, bool has_alpha_channel, Gfx::IntSize size, Gfx::IntSize visible_size, bool flush_immediately)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        window.backingStoreHasAlpha = has_alpha_channel;
+        window.backingStoreVisibleSize = gfx_size_to_ns_size(visible_size);
+
+        if (window.lastBackingStoreSerial == serial) {
+            auto* current_image = window.backingStoreImage;
+            window.backingStoreImage = window.lastBackingStoreImage;
+            window.lastBackingStoreImage = current_image;
+            window.backingStoreSerial = serial;
+        } else {
+            auto buffer_or_error = Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), pitch * size.height());
+            if (buffer_or_error.is_error()) {
+                on_misbehave("SetWindowBackingStore: Failed to create anonymous buffer");
+                return;
+            }
+
+            auto bitmap_or_error = Gfx::Bitmap::create_with_anonymous_buffer(
+                has_alpha_channel ? Gfx::BitmapFormat::BGRA8888 : Gfx::BitmapFormat::BGRx8888,
+                buffer_or_error.release_value(),
+                size,
+                1);
+            if (bitmap_or_error.is_error()) {
+                on_misbehave("SetWindowBackingStore: Failed to create bitmap");
+                return;
+            }
+
+            window.lastBackingStoreImage = window.backingStoreImage;
+            window.backingStoreImage = gfx_bitmap_to_ns_image(bitmap_or_error.release_value());
+            window.lastBackingStoreSerial = window.backingStoreSerial;
+            window.backingStoreSerial = serial;
+        }
+
+        auto* content_view = content_view_for_window(window);
+        if (!content_view) {
+            on_misbehave("SetWindowBackingStore: Missing ContentView");
+            return;
+        }
+        if (flush_immediately)
+            [content_view setNeedsDisplay:YES];
+        else
+            [content_view setNeedsDisplayInRect:content_view.bounds];
+        return;
+    }
+
+    on_misbehave("SetWindowBackingStore: Bad Window ID");
 }
 
 void WindowServerCallbacksMacOS::set_window_has_alpha_channel(i32, bool)
