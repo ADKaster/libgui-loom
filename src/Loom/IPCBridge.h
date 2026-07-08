@@ -10,6 +10,7 @@
 #include <AK/NonnullOwnPtr.h>
 #include <LibIPC/MultiServer.h>
 #include <Loom/ClipboardConnectionProxy.h>
+#include <Loom/LaunchServerConnectionProxy.h>
 #include <Loom/WindowServerConnectionProxy.h>
 
 namespace Loom {
@@ -24,11 +25,12 @@ public:
     ~IPCBridge();
 
 private:
-    IPCBridge(NonnullRefPtr<WindowServerCallbacks>, NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>>);
+    IPCBridge(NonnullRefPtr<WindowServerCallbacks>, NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>>);
 
     NonnullRefPtr<WindowServerCallbacks> m_window_server_callbacks;
     NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> m_window_server;
     NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> m_clipboard_server;
+    NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>> m_launch_server;
 };
 
 }
