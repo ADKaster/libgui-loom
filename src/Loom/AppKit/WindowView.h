@@ -11,5 +11,9 @@
 @interface WindowView : NSView
 
 - (instancetype)initWithFrame:(NSRect)frameRect;
+- (void)configureTitlebarButtons;
+- (void)updateZoomButtonImage;
+- (void)layoutTitlebarButtons;
+- (void)setWindowIconImage:(NSImage*)iconImage;
 
 @end

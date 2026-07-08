@@ -12,6 +12,8 @@ if (APPLE)
         AppKit/ScreenLayout.mm
         AppKit/EventLoopImplementation.mm
         AppKit/WindowController.mm
+        AppKit/Window.mm
+        AppKit/IconBag.mm
         AppKit/WindowServerCallbacksMacOS.mm
         AppKit/WindowView.mm
         AppKit/WindowViewController.mm

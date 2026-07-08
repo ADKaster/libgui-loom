@@ -5,13 +5,9 @@
  */
 
 #include "WindowController.h"
+#include "Window.h"
+#include "WindowView.h"
 #include "WindowViewController.h"
-
-@interface WindowController () <NSToolbarDelegate>;
-
-@property (nonatomic, strong) NSToolbar* toolbar;
-
-@end
 
 @implementation WindowController
 
@@ -19,24 +15,23 @@
 {
     if (self = [super init]) {
         self.windowID = id;
-        self.toolbar = [[NSToolbar alloc] initWithIdentifier:@"Toolbar"];
-        [self.toolbar setDelegate:self];
-        [self.toolbar setDisplayMode:NSToolbarDisplayModeIconOnly];
-        if (@available(macOS 15, *)) {
-            if ([self.toolbar respondsToSelector:@selector(setAllowsDisplayModeCustomization:)]) {
-                [self.toolbar performSelector:@selector(setAllowsDisplayModeCustomization:) withObject:nil];
-            }
-        }
-        [self.toolbar setAllowsUserCustomization:NO];
-        [self.toolbar setSizeMode:NSToolbarSizeModeRegular];
 
         auto* viewController = [[WindowViewController alloc] initWithFrame:contentRect];
 
-        self.window = [NSWindow windowWithContentViewController:viewController];
+        self.window = [Window windowWithContentViewController:viewController];
         [self.window setDelegate:self];
+        [self.window setTitlebarAppearsTransparent:YES];
+        [self.window setTitleVisibility:NSWindowTitleHidden];
+        self.window.styleMask = NSWindowStyleMaskBorderless;
+        self.window.styleMask |= NSWindowStyleMaskResizable;
+        [self.window setMovableByWindowBackground:YES];
 
-        [self.window setToolbar:self.toolbar];
-        [self.window setToolbarStyle:NSWindowToolbarStyleUnified];
+        [[self.window standardWindowButton:NSWindowCloseButton] setHidden:YES];
+        [[self.window standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
+        [[self.window standardWindowButton:NSWindowZoomButton] setHidden:YES];
+
+        [(WindowView*)viewController.view configureTitlebarButtons];
+        [viewController.view setNeedsLayout:YES];
     }
     return self;
 }

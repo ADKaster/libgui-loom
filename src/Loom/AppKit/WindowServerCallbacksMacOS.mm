@@ -7,8 +7,12 @@
 #include "CocoaWrapper.h"
 
 #include "Conversions.h"
+#include "Window.h"
+#include "WindowView.h"
 #include "WindowServerCallbacksMacOS.h"
 #include "WindowController.h"
+
+#include <LibGfx/ShareableBitmap.h>
 
 namespace Loom {
 
@@ -110,7 +114,7 @@ void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gf
     [[new_window window] setTitle:[NSString stringWithUTF8String:title.characters()]];
     [[new_window window] setOpaque:!has_alpha_channel];
     [[new_window window] setAlphaValue:has_alpha_channel ? 0.5 : 1.0];
-    [[new_window window] setMinSize:gfx_size_to_ns_size(minimum_size)];
+    [[new_window window] setContentMinSize:gfx_size_to_ns_size(minimum_size)];
 
     NSWindowStyleMask style_mask = [[new_window window] styleMask];
     
@@ -158,38 +162,55 @@ Messages::WindowServer::GetWindowTitleResponse WindowServerCallbacksMacOS::get_w
     return nullptr;
 }
 
-Messages::WindowServer::IsMaximizedResponse WindowServerCallbacksMacOS::is_maximized(i32)
+Messages::WindowServer::IsMaximizedResponse WindowServerCallbacksMacOS::is_maximized(i32 window_id)
 {
-    return nullptr;
+    if (auto* window = m_impl->window_for_id(window_id))
+        return [(Window*)[window window] serenityIsZoomed];
+    return false;
 }
 
-void WindowServerCallbacksMacOS::set_maximized(i32, bool)
+void WindowServerCallbacksMacOS::set_maximized(i32 window_id, bool maximized)
 {
+    if (auto* window = m_impl->window_for_id(window_id))
+        [(Window*)[window window] serenitySetZoomed:maximized];
 }
 
-Messages::WindowServer::IsMinimizedResponse WindowServerCallbacksMacOS::is_minimized(i32)
+Messages::WindowServer::IsMinimizedResponse WindowServerCallbacksMacOS::is_minimized(i32 window_id)
 {
-    return nullptr;
+    if (auto* window = m_impl->window_for_id(window_id))
+        return [(Window*)[window window] serenityIsMiniaturized];
+    return false;
 }
 
-void WindowServerCallbacksMacOS::set_minimized(i32, bool)
+void WindowServerCallbacksMacOS::set_minimized(i32 window_id, bool minimized)
 {
+    if (auto* window = m_impl->window_for_id(window_id))
+        [(Window*)[window window] serenitySetMiniaturized:minimized];
 }
 
 void WindowServerCallbacksMacOS::start_window_resize(i32, i32)
 {
 }
 
-Messages::WindowServer::SetWindowRectResponse WindowServerCallbacksMacOS::set_window_rect(i32, Gfx::IntRect const&)
+Messages::WindowServer::SetWindowRectResponse WindowServerCallbacksMacOS::set_window_rect(i32 window_id, Gfx::IntRect const& rect)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        auto* ns_window = [window window];
+        auto content_rect = gfx_rect_to_ns_rect(rect);
+        auto frame_rect = [ns_window frameRectForContentRect:content_rect];
+        [ns_window setFrame:frame_rect display:YES animate:NO];
+        return ns_rect_to_gfx_rect([ns_window contentRectForFrameRect:[ns_window frame]]);
+    }
+    on_misbehave("SetWindowRect: Bad Window ID");
     return nullptr;
 }
 
 Messages::WindowServer::GetWindowRectResponse WindowServerCallbacksMacOS::get_window_rect(i32 window_id)
 {
     if (auto* window = m_impl->window_for_id(window_id)) {
-        NSRect frame = [[window window] frame];
-        return ns_rect_to_gfx_rect(frame);
+        auto* ns_window = [window window];
+        NSRect content_rect = [ns_window contentRectForFrameRect:[ns_window frame]];
+        return ns_rect_to_gfx_rect(content_rect);
     }
     on_misbehave("GetWindowRect: Bad Window ID");
     return nullptr;
@@ -200,12 +221,20 @@ Messages::WindowServer::GetWindowFloatingRectResponse WindowServerCallbacksMacOS
     return nullptr;
 }
 
-void WindowServerCallbacksMacOS::set_window_minimum_size(i32, Gfx::IntSize)
+void WindowServerCallbacksMacOS::set_window_minimum_size(i32 window_id, Gfx::IntSize size)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        [[window window] setContentMinSize:gfx_size_to_ns_size(size)];
+        return;
+    }
+    on_misbehave("SetWindowMinimumSize: Bad Window ID");
 }
 
-Messages::WindowServer::GetWindowMinimumSizeResponse WindowServerCallbacksMacOS::get_window_minimum_size(i32)
+Messages::WindowServer::GetWindowMinimumSizeResponse WindowServerCallbacksMacOS::get_window_minimum_size(i32 window_id)
 {
+    if (auto* window = m_impl->window_for_id(window_id))
+        return ns_size_to_gfx_size([[window window] contentMinSize]);
+    on_misbehave("GetWindowMinimumSize: Bad Window ID");
     return nullptr;
 }
 
@@ -317,8 +346,17 @@ void WindowServerCallbacksMacOS::dismiss_menu(i32)
 {
 }
 
-void WindowServerCallbacksMacOS::set_window_icon_bitmap(i32, Gfx::ShareableBitmap const&)
+void WindowServerCallbacksMacOS::set_window_icon_bitmap(i32 window_id, Gfx::ShareableBitmap const& icon)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        NSImage* icon_image = nil;
+        if (icon.is_valid())
+            icon_image = gfx_bitmap_to_ns_image(*icon.bitmap());
+
+        window.windowIconImage = icon_image;
+        if ([window.window.contentView isKindOfClass:[WindowView class]])
+            [(WindowView*)window.window.contentView setWindowIconImage:icon_image];
+    }
 }
 
 Messages::WindowServer::StartDragResponse WindowServerCallbacksMacOS::start_drag(ByteString const&, HashMap<String, ByteBuffer> const&, Gfx::ShareableBitmap const&)
@@ -519,8 +557,14 @@ void WindowServerCallbacksMacOS::set_window_parent_from_client(i32, i32, i32)
 {
 }
 
-Messages::WindowServer::GetWindowRectFromClientResponse WindowServerCallbacksMacOS::get_window_rect_from_client(i32, i32)
+Messages::WindowServer::GetWindowRectFromClientResponse WindowServerCallbacksMacOS::get_window_rect_from_client(i32, i32 window_id)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        auto* ns_window = [window window];
+        NSRect content_rect = [ns_window contentRectForFrameRect:[ns_window frame]];
+        return ns_rect_to_gfx_rect(content_rect);
+    }
+    on_misbehave("GetWindowRectFromClient: Bad Window ID");
     return nullptr;
 }
 

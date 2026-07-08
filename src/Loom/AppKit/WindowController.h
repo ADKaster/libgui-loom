@@ -11,6 +11,7 @@
 @interface WindowController : NSWindowController <NSWindowDelegate>
 
 @property (nonatomic, assign) int windowID;
+@property (nonatomic, strong) NSImage* windowIconImage;
 
 - (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id;
 
