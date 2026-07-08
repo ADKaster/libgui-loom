@@ -39,6 +39,26 @@ void WindowServerConnectionProxy::set_callbacks(NonnullRefPtr<WindowServerCallba
 
 WindowServerConnectionProxy::~WindowServerConnectionProxy() = default;
 
+WindowServerConnectionProxy* WindowServerConnectionProxy::for_client_id(int client_id)
+{
+    if (!s_connections)
+        return nullptr;
+
+    auto it = s_connections->find(client_id);
+    if (it == s_connections->end())
+        return nullptr;
+    return it->value.ptr();
+}
+
+void WindowServerConnectionProxy::for_each_client(Function<void(WindowServerConnectionProxy&)> callback)
+{
+    if (!s_connections)
+        return;
+
+    for (auto& [_, client] : *s_connections)
+        callback(*client);
+}
+
 void WindowServerConnectionProxy::die()
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: die()");

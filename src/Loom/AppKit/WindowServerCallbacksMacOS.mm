@@ -102,7 +102,8 @@ void WindowServerCallbacksMacOS::create_window(i32 window_id, i32 process_id, Gf
     // FIXME: Do math to reconcile 'rect_when_windowless' with 'system recommended window size'
     //        Ref: WindowServer's CreateWindow callback
     auto* new_window = [[WindowController alloc] initWithContentRect:gfx_rect_to_ns_rect(rect)
-                                                            windowID:window_id];
+                                                            windowID:window_id
+                                                            clientID:process_id];
 
     [m_impl->windows setObject:new_window
                         forKey:[NSNumber numberWithInt:window_id]];

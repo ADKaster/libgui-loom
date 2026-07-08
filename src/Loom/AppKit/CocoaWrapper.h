@@ -7,7 +7,9 @@
 #pragma once
 
 // FIXME: Workaround for https://openradar.appspot.com/21478051, remove once that's fixed.
-#define __COLORSYNCDEPRECATED__
+#ifndef __COLORSYNCDEPRECATED__
+#    define __COLORSYNCDEPRECATED__
+#endif
 
 // Several AK types conflict with MacOS types.
 #define Duration DurationMacOS

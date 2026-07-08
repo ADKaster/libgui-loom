@@ -28,6 +28,8 @@ class WindowServerConnectionProxy final
     C_OBJECT(WindowServerConnectionProxy);
 public:
     virtual ~WindowServerConnectionProxy() override;
+    static WindowServerConnectionProxy* for_client_id(int client_id);
+    static void for_each_client(Function<void(WindowServerConnectionProxy&)>);
     void set_callbacks(NonnullRefPtr<WindowServerCallbacks>);
 
 private:

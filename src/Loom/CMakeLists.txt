@@ -15,6 +15,7 @@ if (APPLE)
         AppKit/Window.mm
         AppKit/IconBag.mm
         AppKit/WindowServerCallbacksMacOS.mm
+        AppKit/ContentView.mm
         AppKit/WindowView.mm
         AppKit/WindowViewController.mm
     )
