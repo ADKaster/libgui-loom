@@ -21,6 +21,10 @@ class ClipboardConnectionProxy final
 public:
     virtual ~ClipboardConnectionProxy() override;
 
+    static void for_each_client(Function<void(ClipboardConnectionProxy&)>);
+
+    void notify_about_clipboard_change();
+
 private:
     ClipboardConnectionProxy(NonnullOwnPtr<Core::LocalSocket>, int client_id);
 

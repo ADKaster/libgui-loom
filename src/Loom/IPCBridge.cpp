@@ -7,6 +7,7 @@
 #include "IPCBridge.h"
 #include <LibCore/Socket.h>
 #include <LibCore/Directory.h>
+#include <Services/Clipboard/Storage.h>
 
 namespace Loom
 {
@@ -19,6 +20,13 @@ IPCBridge::IPCBridge(NonnullRefPtr<WindowServerCallbacks> callbacks, NonnullOwnP
 {
     m_window_server->on_new_client = [this](WindowServerConnectionProxy& client) {
         client.set_callbacks(m_window_server_callbacks);
+    };
+
+    Clipboard::Storage::the().on_content_change = [&] {
+        // FIXME: Sync with system clipboard
+        ClipboardConnectionProxy::for_each_client([&](auto& client) {
+            client.notify_about_clipboard_change();
+        });
     };
 }
 

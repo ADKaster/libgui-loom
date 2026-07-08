@@ -29,3 +29,7 @@ target_sources(Loom PRIVATE
 )
 target_include_directories(Loom PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(Loom PRIVATE AK LibCore LibIPC LibGfx)
+
+target_sources(Loom PRIVATE
+    "${SERENITY_SOURCE_DIR}/Userland/Services/Clipboard/Storage.cpp"
+)
