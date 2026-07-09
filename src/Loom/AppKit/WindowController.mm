@@ -172,14 +172,15 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
 
 @implementation WindowController {
     RefPtr<Gfx::Bitmap> _backing_store_bitmap;
+    RefPtr<Loom::WindowServerConnectionProxy> _connection;
     BOOL _suppress_next_close_request_notification;
 }
 
-- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id connection:(Loom::WindowServerConnectionProxy*)connection
+- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id connection:(NonnullRefPtr<Loom::WindowServerConnectionProxy>)connection
 {
     if (self = [super init]) {
         self.windowID = id;
-        self.connection = connection;
+        _connection = move(connection);
         self.serenityContentSize = contentRect.size;
 
         auto* viewController = [[WindowViewController alloc] initWithFrame:contentRect];
@@ -212,9 +213,9 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
     _backing_store_bitmap = move(bitmap);
 }
 
-- (Loom::WindowServerConnectionProxy*)windowServerConnection
+- (Loom::WindowServerConnectionProxy&)windowServerConnection
 {
-    return self.connection;
+    return *_connection;
 }
 
 - (NSImage*)backingStoreImage
@@ -232,11 +233,8 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
 
 - (void)serenityRequestCloseFromTitlebarButton
 {
-    if (auto* connection = [self windowServerConnection]) {
-        connection->async_window_close_request(self.windowID);
-        return;
-    }
-    [self close];
+    auto& connection = [self windowServerConnection];
+    connection.async_window_close_request(self.windowID);
 }
 
 - (BOOL)windowShouldClose:(NSWindow*)sender
@@ -247,20 +245,16 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
         return YES;
     }
 
-    if (auto* connection = [self windowServerConnection]) {
-        connection->async_window_close_request(self.windowID);
-        return NO;
-    }
-    return YES;
+    auto& connection = [self windowServerConnection];
+    connection.async_window_close_request(self.windowID);
+    return NO;
 }
 
 - (void)contentView:(ContentView*)contentView didReceiveEvent:(NSEvent*)event
 {
     (void)contentView;
 
-    auto* connection = [self windowServerConnection];
-    if (!connection)
-        return;
+    auto& connection = [self windowServerConnection];
 
     auto* windowView = (WindowView*)self.window.contentView;
     auto* content = windowView.contentView;
@@ -272,7 +266,7 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
 
     switch (event.type) {
     case NSEventTypeMouseMoved:
-        connection->async_mouse_move(self.windowID, position, 0, static_cast<unsigned>([NSEvent pressedMouseButtons]), serenity_modifiers_from_event(event.modifierFlags), 0, 0, 0, 0);
+        connection.async_mouse_move(self.windowID, position, 0, static_cast<unsigned>([NSEvent pressedMouseButtons]), serenity_modifiers_from_event(event.modifierFlags), 0, 0, 0, 0);
         break;
     case NSEventTypeLeftMouseDown:
     case NSEventTypeRightMouseDown:
@@ -284,9 +278,9 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
         if (button == 0u)
             break;
 
-        connection->async_mouse_down(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
+        connection.async_mouse_down(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
         if (event.clickCount >= 2)
-            connection->async_mouse_double_click(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
+            connection.async_mouse_double_click(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
         break;
     }
     case NSEventTypeLeftMouseDragged:
@@ -298,7 +292,7 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
         normalize_mouse_event(event, button, buttons, modifiers);
         if (button == 0u)
             break;
-        connection->async_mouse_move(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
+        connection.async_mouse_move(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
         break;
     }
     case NSEventTypeLeftMouseUp:
@@ -311,11 +305,11 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
             button = 2u;
         if (button == 0u)
             break;
-        connection->async_mouse_up(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
+        connection.async_mouse_up(self.windowID, position, button, buttons, modifiers, 0, 0, 0, 0);
         break;
     }
     case NSEventTypeScrollWheel:
-        connection->async_mouse_wheel(self.windowID, position, 0, static_cast<unsigned>([NSEvent pressedMouseButtons]), serenity_modifiers_from_event(event.modifierFlags), static_cast<int>(-event.scrollingDeltaX), static_cast<int>(-event.scrollingDeltaY), static_cast<int>(-event.scrollingDeltaX), static_cast<int>(-event.scrollingDeltaY));
+        connection.async_mouse_wheel(self.windowID, position, 0, static_cast<unsigned>([NSEvent pressedMouseButtons]), serenity_modifiers_from_event(event.modifierFlags), static_cast<int>(-event.scrollingDeltaX), static_cast<int>(-event.scrollingDeltaY), static_cast<int>(-event.scrollingDeltaX), static_cast<int>(-event.scrollingDeltaY));
         break;
     case NSEventTypeKeyDown: {
         auto key = serenity_key_from_mac_key_code(event.keyCode);
@@ -327,7 +321,7 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
             if (!utf8_view.is_empty())
                 code_point = *utf8_view.begin();
         }
-        connection->async_key_down(self.windowID, code_point, static_cast<u32>(key), 0xff, modifiers, static_cast<u32>(event.keyCode));
+        connection.async_key_down(self.windowID, code_point, static_cast<u32>(key), 0xff, modifiers, static_cast<u32>(event.keyCode));
         break;
     }
     case NSEventTypeKeyUp: {
@@ -340,14 +334,14 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
             if (!utf8_view.is_empty())
                 code_point = *utf8_view.begin();
         }
-        connection->async_key_up(self.windowID, code_point, static_cast<u32>(key), 0xff, modifiers, static_cast<u32>(event.keyCode));
+        connection.async_key_up(self.windowID, code_point, static_cast<u32>(key), 0xff, modifiers, static_cast<u32>(event.keyCode));
         break;
     }
     case NSEventTypeMouseEntered:
-        connection->async_window_entered(self.windowID);
+        connection.async_window_entered(self.windowID);
         break;
     case NSEventTypeMouseExited:
-        connection->async_window_left(self.windowID);
+        connection.async_window_left(self.windowID);
         break;
     default:
         break;
@@ -357,33 +351,31 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
 - (void)windowDidBecomeKey:(NSNotification*)notification
 {
     (void)notification;
-    if (auto* connection = [self windowServerConnection])
-        connection->async_window_activated(self.windowID);
+    auto& connection = [self windowServerConnection];
+    connection.async_window_activated(self.windowID);
 }
 
 - (void)windowDidResignKey:(NSNotification*)notification
 {
     (void)notification;
-    if (auto* connection = [self windowServerConnection])
-        connection->async_window_deactivated(self.windowID);
+    auto& connection = [self windowServerConnection];
+    connection.async_window_deactivated(self.windowID);
 }
 
 - (void)windowDidResize:(NSNotification*)notification
 {
     (void)notification;
-    if (auto* connection = [self windowServerConnection]) {
-        auto* window_view = (WindowView*)self.window.contentView;
-        connection->async_window_resized(self.windowID, Loom::ns_rect_to_gfx_rect([window_view contentRect]));
-    }
+    auto& connection = [self windowServerConnection];
+    auto* window_view = (WindowView*)self.window.contentView;
+    connection.async_window_resized(self.windowID, Loom::ns_rect_to_gfx_rect([window_view contentRect]));
 }
 
 - (void)windowDidMove:(NSNotification*)notification
 {
     (void)notification;
-    if (auto* connection = [self windowServerConnection]) {
-        auto content_rect = [self.window contentRectForFrameRect:self.window.frame];
-        connection->async_window_moved(self.windowID, Loom::ns_rect_to_gfx_rect(content_rect));
-    }
+    auto& connection = [self windowServerConnection];
+    auto content_rect = [self.window contentRectForFrameRect:self.window.frame];
+    connection.async_window_moved(self.windowID, Loom::ns_rect_to_gfx_rect(content_rect));
 }
 
 @end

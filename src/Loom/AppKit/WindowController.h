@@ -18,13 +18,12 @@ class WindowServerConnectionProxy;
 @interface WindowController : NSWindowController <NSWindowDelegate, ContentViewDelegate>
 
 @property (nonatomic, assign) int windowID;
-@property (nonatomic, assign) Loom::WindowServerConnectionProxy* connection;
 @property (nonatomic, assign) NSSize serenityContentSize;
 @property (nonatomic, strong) NSImage* windowIconImage;
 @property (nonatomic, assign) NSSize backingStoreVisibleSize;
 @property (nonatomic, assign) BOOL backingStoreHasAlpha;
 
-- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id connection:(Loom::WindowServerConnectionProxy*)connection;
+- (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id connection:(NonnullRefPtr<Loom::WindowServerConnectionProxy>)connection;
 - (void)setBackingStoreBitmap:(RefPtr<Gfx::Bitmap>)bitmap;
 - (NSImage*)backingStoreImage;
 - (void)serenityRequestCloseFromTitlebarButton;

@@ -106,7 +106,7 @@ void WindowServerCallbacksMacOS::flash_menubar_menu(i32, i32)
 {
 }
 
-void WindowServerCallbacksMacOS::create_window(WindowServerConnectionProxy& owner, i32 window_id, i32 process_id, Gfx::IntRect const& rect, bool auto_position, bool has_alpha_channel, bool minimizable, bool closeable, bool resizable, bool fullscreen, bool frameless, bool forced_shadow, float alpha_hit_threshold, Gfx::IntSize base_size, Gfx::IntSize size_increment, Gfx::IntSize minimum_size, Optional<Gfx::IntSize> const& resize_aspect_ratio, i32 type, i32 mode, ByteString const& title, i32 parent_window_id, Gfx::IntRect const& launch_origin_rect)
+void WindowServerCallbacksMacOS::create_window(NonnullRefPtr<WindowServerConnectionProxy> owner, i32 window_id, i32 process_id, Gfx::IntRect const& rect, bool auto_position, bool has_alpha_channel, bool minimizable, bool closeable, bool resizable, bool fullscreen, bool frameless, bool forced_shadow, float alpha_hit_threshold, Gfx::IntSize base_size, Gfx::IntSize size_increment, Gfx::IntSize minimum_size, Optional<Gfx::IntSize> const& resize_aspect_ratio, i32 type, i32 mode, ByteString const& title, i32 parent_window_id, Gfx::IntRect const& launch_origin_rect)
 {
     (void)process_id;
     (void)auto_position;
@@ -125,7 +125,7 @@ void WindowServerCallbacksMacOS::create_window(WindowServerConnectionProxy& owne
     //        Ref: WindowServer's CreateWindow callback
     auto* new_window = [[WindowController alloc] initWithContentRect:gfx_rect_to_ns_rect(rect)
                                                             windowID:window_id
-                                                            connection:&owner];
+                                                            connection:move(owner)];
 
     [m_impl->windows setObject:new_window
                         forKey:[NSNumber numberWithInt:window_id]];

@@ -26,7 +26,7 @@ public:
     virtual void create_window(i32, i32, Gfx::IntRect const&, bool, bool, bool,
         bool, bool, bool, bool, bool, float, Gfx::IntSize, Gfx::IntSize, Gfx::IntSize,
         Optional<Gfx::IntSize> const&, i32, i32, ByteString const&, i32, Gfx::IntRect const&) override { }
-    virtual void create_window(WindowServerConnectionProxy&, i32, i32, Gfx::IntRect const&, bool, bool, bool,
+    virtual void create_window(NonnullRefPtr<WindowServerConnectionProxy>, i32, i32, Gfx::IntRect const&, bool, bool, bool,
         bool, bool, bool, bool, bool, float, Gfx::IntSize, Gfx::IntSize, Gfx::IntSize,
         Optional<Gfx::IntSize> const&, i32, i32, ByteString const&, i32, Gfx::IntRect const&) = 0;
 };
