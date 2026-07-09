@@ -27,5 +27,7 @@ class WindowServerConnectionProxy;
 - (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id connection:(Loom::WindowServerConnectionProxy*)connection;
 - (void)setBackingStoreBitmap:(RefPtr<Gfx::Bitmap>)bitmap;
 - (NSImage*)backingStoreImage;
+- (void)serenityRequestCloseFromTitlebarButton;
+- (void)serenityCloseFromServer;
 
 @end

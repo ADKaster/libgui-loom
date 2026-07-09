@@ -117,9 +117,7 @@ void WindowServerCallbacksMacOS::create_window(WindowServerConnectionProxy& owne
     (void)base_size;
     (void)size_increment;
     (void)resize_aspect_ratio;
-    (void)type;
     (void)mode;
-    (void)parent_window_id;
     (void)launch_origin_rect;
 
 
@@ -158,14 +156,34 @@ void WindowServerCallbacksMacOS::create_window(WindowServerConnectionProxy& owne
     else
         style_mask &= ~NSWindowStyleMaskMiniaturizable;
     
-    [[new_window window] setStyleMask:style_mask];
+    auto* ns_window = [new_window window];
+    [ns_window setStyleMask:style_mask];
 
-    [[new_window window] makeKeyAndOrderFront:nil];
+    constexpr i32 window_type_normal = 1;
+    constexpr i32 window_type_desktop = 8;
+    bool can_become_active = type == window_type_normal || type == window_type_desktop;
+    if (can_become_active) {
+        if (parent_window_id == 0)
+            [NSApp activateIgnoringOtherApps:YES];
+        [ns_window makeKeyAndOrderFront:nil];
+    } else {
+        [ns_window orderFront:nil];
+    }
 }
 
-Messages::WindowServer::DestroyWindowResponse WindowServerCallbacksMacOS::destroy_window(i32)
+Messages::WindowServer::DestroyWindowResponse WindowServerCallbacksMacOS::destroy_window(i32 window_id)
 {
-    return nullptr;
+    auto* window = m_impl->window_for_id(window_id);
+    if (!window) {
+        on_misbehave("DeleteWindow: Bad Window ID");
+        return nullptr;
+    }
+
+    [window serenityCloseFromServer];
+    [m_impl->windows removeObjectForKey:[NSNumber numberWithInt:window_id]];
+    Vector<i32> destroyed_window_ids;
+    destroyed_window_ids.append(window_id);
+    return destroyed_window_ids;
 }
 
 void WindowServerCallbacksMacOS::set_window_title(i32 window_id, ByteString const& title)
@@ -240,8 +258,14 @@ Messages::WindowServer::GetWindowRectResponse WindowServerCallbacksMacOS::get_wi
     return nullptr;
 }
 
-Messages::WindowServer::GetWindowFloatingRectResponse WindowServerCallbacksMacOS::get_window_floating_rect(i32)
+Messages::WindowServer::GetWindowFloatingRectResponse WindowServerCallbacksMacOS::get_window_floating_rect(i32 window_id)
 {
+    if (auto* window = m_impl->window_for_id(window_id)) {
+        auto* ns_window = [window window];
+        auto content_rect = [ns_window contentRectForFrameRect:ns_window.frame];
+        return ns_rect_to_gfx_rect(content_rect);
+    }
+    on_misbehave("GetWindowFloatingRect: Bad Window ID");
     return nullptr;
 }
 

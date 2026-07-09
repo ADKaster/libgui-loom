@@ -172,6 +172,7 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
 
 @implementation WindowController {
     RefPtr<Gfx::Bitmap> _backing_store_bitmap;
+    BOOL _suppress_next_close_request_notification;
 }
 
 - (instancetype)initWithContentRect:(NSRect)contentRect windowID:(int)id connection:(Loom::WindowServerConnectionProxy*)connection
@@ -201,6 +202,7 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
         [windowView configureTitlebarButtons];
         [windowView setNeedsLayout:YES];
         [self.window makeFirstResponder:contentView];
+        _suppress_next_close_request_notification = NO;
     }
     return self;
 }
@@ -220,6 +222,36 @@ static void normalize_mouse_event(NSEvent* event, unsigned& button, unsigned& bu
     if (!_backing_store_bitmap)
         return nil;
     return Loom::gfx_bitmap_to_ns_image(*_backing_store_bitmap);
+}
+
+- (void)serenityCloseFromServer
+{
+    _suppress_next_close_request_notification = YES;
+    [self close];
+}
+
+- (void)serenityRequestCloseFromTitlebarButton
+{
+    if (auto* connection = [self windowServerConnection]) {
+        connection->async_window_close_request(self.windowID);
+        return;
+    }
+    [self close];
+}
+
+- (BOOL)windowShouldClose:(NSWindow*)sender
+{
+    (void)sender;
+    if (_suppress_next_close_request_notification) {
+        _suppress_next_close_request_notification = NO;
+        return YES;
+    }
+
+    if (auto* connection = [self windowServerConnection]) {
+        connection->async_window_close_request(self.windowID);
+        return NO;
+    }
+    return YES;
 }
 
 - (void)contentView:(ContentView*)contentView didReceiveEvent:(NSEvent*)event

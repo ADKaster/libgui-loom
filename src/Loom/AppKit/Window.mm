@@ -5,6 +5,7 @@
  */
 
 #include "Window.h"
+#include "WindowController.h"
 #include "WindowView.h"
 #include <objc/runtime.h>
 
@@ -21,7 +22,11 @@ static void const* s_serenity_zoomed_key = &s_serenity_zoomed_key;
 - (void)serenityCloseWindow:(id)sender
 {
     (void)sender;
-    [self close];
+    if ([self.windowController isKindOfClass:[WindowController class]]) {
+        [(WindowController*)self.windowController serenityRequestCloseFromTitlebarButton];
+        return;
+    }
+    [self performClose:nil];
 }
 
 - (BOOL)canBecomeKeyWindow
