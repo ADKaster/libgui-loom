@@ -51,6 +51,7 @@ include_directories(${SERENITY_SOURCE_DIR}/Userland/Libraries/)
 include_directories(${SERENITY_SOURCE_DIR}/Userland/Services)
 include_directories(${CMAKE_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/Userland/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Userland/Libraries)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/Userland/Services)
 
@@ -218,11 +219,25 @@ lagom_lib(LibGUI_GML gui_gml
 
 add_serenity_subdirectory(Meta/Lagom/Tools/CodeGenerators)
 
+macro(add_dummy_component name)
+    if (NOT TARGET ${name})
+        add_library(${name} INTERFACE)
+        serenity_component(${name} RECOMMENDED TARGETS ${name})
+    endif()
+endmacro()
+
+add_dummy_component(ImageDecoder)
+add_dummy_component(FileSystemAccessServer)
+add_dummy_component(WindowServer)
+
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/Clipboard/ClipboardClient.ipc Userland/Services/Clipboard/ClipboardClientEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/Clipboard/ClipboardServer.ipc Userland/Services/Clipboard/ClipboardServerEndpoint.h)
 
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/ConfigServer/ConfigClient.ipc Userland/Services/ConfigServer/ConfigClientEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/ConfigServer/ConfigServer.ipc Userland/Services/ConfigServer/ConfigServerEndpoint.h)
+
+compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/FileSystemAccessServer/FileSystemAccessClient.ipc Userland/Services/FileSystemAccessServer/FileSystemAccessClientEndpoint.h)
+compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/FileSystemAccessServer/FileSystemAccessServer.ipc Userland/Services/FileSystemAccessServer/FileSystemAccessServerEndpoint.h)
 
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/LaunchServer/LaunchClient.ipc Userland/Services/LaunchServer/LaunchClientEndpoint.h)
 compile_ipc(${SERENITY_SOURCE_DIR}/Userland/Services/LaunchServer/LaunchServer.ipc Userland/Services/LaunchServer/LaunchServerEndpoint.h)
@@ -241,6 +256,7 @@ set(libs
     Crypto
     Desktop
     ELF
+    FileSystemAccessClient
     Gfx
     GUI
     IPC
@@ -260,3 +276,4 @@ endforeach()
 add_subdirectory(src)
 
 add_serenity_subdirectory(Userland/Applications/Calculator)
+add_serenity_subdirectory(Userland/Applications/PixelPaint)
