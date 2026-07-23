@@ -30,19 +30,8 @@ int main(int argc, const char* argv[])
     (void)argc;
     (void)argv;
 
-    auto serenity_source_dir = Core::Environment::get("SERENITY_SOURCE_DIR"sv);
-    if (!serenity_source_dir.has_value()) {
-        warnln("SERENITY_SOURCE_DIR environment variable is not set");
-        return 1;
-    }
-
-    auto resource_dir = MUST(String::formatted("{}/Base/res", serenity_source_dir.value()));
-
-    Core::ResourceImplementation::install(make<Core::ResourceImplementationFile>(resource_dir));
-
     auto theme_name = "Default"sv;
-
-    auto theme = MUST(Gfx::load_system_theme(ByteString::formatted("{}/themes/{}.ini", resource_dir, theme_name), {}));
+    auto theme = MUST(Gfx::load_system_theme(ByteString::formatted("resource://themes/{}.ini", theme_name)));
     Gfx::set_system_theme(theme);
     // FIXME: auto palette = Gfx::PaletteImpl::create_with_anonymous_buffer(theme);
 
