@@ -12,10 +12,11 @@
 namespace Loom
 {
 
-IPCBridge::IPCBridge(NonnullRefPtr<WindowServerCallbacks> callbacks, NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> clipboard_server, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>> launch_server)
+IPCBridge::IPCBridge(NonnullRefPtr<WindowServerCallbacks> callbacks, NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> clipboard_server, NonnullOwnPtr<IPC::MultiServer<ConfigServerConnectionProxy>> config_server, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>> launch_server)
     : m_window_server_callbacks(move(callbacks))
     , m_window_server(move(window_server))
     , m_clipboard_server(move(clipboard_server))
+    , m_config_server(move(config_server))
     , m_launch_server(move(launch_server))
 {
     m_window_server->on_new_client = [this](WindowServerConnectionProxy& client) {
@@ -77,12 +78,17 @@ NonnullOwnPtr<IPCBridge> IPCBridge::create(NonnullRefPtr<WindowServerCallbacks> 
     MUST(clipboard_server_server->take_over_fd(clipboard_server_socket));
     auto clipboard_server = MUST(IPC::MultiServer<ClipboardConnectionProxy>::try_create(move(clipboard_server_server)));
 
+    auto config_server_server = MUST(Core::LocalServer::try_create());
+    auto const config_server_socket = MUST(create_ipc_socket("/tmp/session/0/portal/config"sv));
+    MUST(config_server_server->take_over_fd(config_server_socket));
+    auto config_server = MUST(IPC::MultiServer<ConfigServerConnectionProxy>::try_create(move(config_server_server)));
+
     auto launch_server_server = MUST(Core::LocalServer::try_create());
     auto const launch_server_socket = MUST(create_ipc_socket("/tmp/session/0/portal/launch"sv));
     MUST(launch_server_server->take_over_fd(launch_server_socket));
     auto launch_server = MUST(IPC::MultiServer<LaunchServerConnectionProxy>::try_create(move(launch_server_server)));
 
-    return adopt_own(*new IPCBridge(move(callbacks), move(window_server), move(clipboard_server), move(launch_server)));
+    return adopt_own(*new IPCBridge(move(callbacks), move(window_server), move(clipboard_server), move(config_server), move(launch_server)));
 }
 
 }

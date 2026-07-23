@@ -27,6 +27,7 @@ endif()
 target_sources(Loom PRIVATE
     IPCBridge.cpp
     ClipboardConnectionProxy.cpp
+    ConfigServerConnectionProxy.cpp
     LaunchServerConnectionProxy.cpp
     WindowServerConnectionProxy.cpp
 )
