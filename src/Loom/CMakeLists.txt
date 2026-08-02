@@ -14,7 +14,7 @@ if (APPLE)
         AppKit/WindowController.mm
         AppKit/Window.mm
         AppKit/IconBag.mm
-        AppKit/WindowServerCallbacksMacOS.mm
+        AppKit/WindowServerConnectionProxy.mm
         AppKit/ContentView.mm
         AppKit/WindowView.mm
         AppKit/WindowViewController.mm
@@ -22,6 +22,7 @@ if (APPLE)
 
     target_link_libraries(Loom PRIVATE ${APPKIT_FRAMEWORK})
     target_compile_options(Loom PRIVATE -fobjc-arc)
+    target_compile_definitions(Loom PRIVATE LOOM_BACKEND_APPKIT)
 endif()
 
 target_sources(Loom PRIVATE
@@ -29,7 +30,6 @@ target_sources(Loom PRIVATE
     ClipboardConnectionProxy.cpp
     ConfigServerConnectionProxy.cpp
     LaunchServerConnectionProxy.cpp
-    WindowServerConnectionProxy.cpp
 )
 target_include_directories(Loom PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(Loom PRIVATE AK LibCore LibIPC LibGfx serenity_resources)
