@@ -1,5 +1,17 @@
 
 if (APPLE)
+    set(LOOM_BACKEND_DEFAULT AppKit)
+else()
+    set(LOOM_BACKEND_DEFAULT Wayland)
+endif()
+
+set(LOOM_BACKEND ${LOOM_BACKEND_DEFAULT} CACHE STRING "Backend to use")
+
+if (NOT LOOM_BACKEND MATCHES "AppKit|Wayland")
+    message(FATAL_ERROR "Invalid LOOM_BACKEND cache value, must be AppKit or Wayland")
+endif()
+
+if (LOOM_BACKEND STREQUAL "AppKit")
 
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
 
@@ -23,6 +35,13 @@ if (APPLE)
     target_link_libraries(Loom PRIVATE ${APPKIT_FRAMEWORK})
     target_compile_options(Loom PRIVATE -fobjc-arc)
     target_compile_definitions(Loom PRIVATE LOOM_BACKEND_APPKIT)
+elseif (LOOM_BACKEND STREQUAL "Wayland")
+    add_executable(Loom
+        Wayland/main.cpp
+        Wayland/ScreenLayout.cpp
+        Wayland/WindowServerConnectionProxy.cpp
+    )
+    target_compile_definitions(Loom PRIVATE LOOM_BACKEND_WAYLAND)
 endif()
 
 target_sources(Loom PRIVATE

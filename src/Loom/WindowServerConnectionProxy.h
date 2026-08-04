@@ -10,6 +10,8 @@
 
 #if LOOM_BACKEND(APPKIT)
 #    include <Loom/AppKit/WindowServerConnectionProxy.h>
+#elif LOOM_BACKEND(WAYLAND)
+#    include <Loom/Wayland/WindowServerConnectionProxy.h>
 #else
 #    error "Unknown LOOM_BACKEND"
 #endif
