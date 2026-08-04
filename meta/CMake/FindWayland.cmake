@@ -1,9 +1,15 @@
 
 include(ExternalProject)
 include(FindPackageHandleStandardArgs)
+include(GNUInstallDirs)
 find_package(PkgConfig REQUIRED)
 
 set(WAYLAND_STAGE_DIR ${CMAKE_BINARY_DIR}/wayland_staging)
+set(WAYLAND_STAGE_LIBDIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(WAYLAND_STAGE_BINDIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_BINDIR})
+set(WAYLAND_STAGE_INCLUDEDIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
+set(WAYLAND_STAGE_DATADIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_DATADIR}/wayland)
+
 set(WAYLAND_FALLBACK_VERSION 1.26.0)
 
 set(_wayland_known_components Client Server Cursor Egl Scanner)
@@ -25,14 +31,10 @@ function(_wayland_add_library_target component target_name soname)
     if (_wayland_use_external)
         add_library(${target_name} SHARED IMPORTED GLOBAL)
         set_target_properties(${target_name} PROPERTIES
-            IMPORTED_LOCATION "${WAYLAND_STAGE_DIR}/lib/lib${soname}${CMAKE_SHARED_LIBRARY_SUFFIX}"
-            INTERFACE_INCLUDE_DIRECTORIES "${WAYLAND_STAGE_DIR}/include"
+		    IMPORTED_LOCATION "${WAYLAND_STAGE_LIBDIR}/lib${soname}${CMAKE_SHARED_LIBRARY_SUFFIX}"
+            INTERFACE_INCLUDE_DIRECTORIES "${WAYLAND_STAGE_INCLUDEDIR}"
         )
-        if (TARGET Wayland_external-install)
-            add_dependencies(${target_name} Wayland_external-install)
-        elseif (TARGET Wayland_external)
-            add_dependencies(${target_name} Wayland_external)
-        endif()
+        add_dependencies(${target_name} Wayland_external)
         return()
     endif()
 
@@ -44,27 +46,24 @@ function(_wayland_add_library_target component target_name soname)
     target_link_libraries(${target_name} INTERFACE PkgConfig::PC_Wayland_${component})
 endfunction()
 
-function(_wayland_add_scanner_target target_name scanner_executable)
+function(_wayland_add_executable_target target_name executable_location)
     if (TARGET ${target_name})
         return()
     endif()
     add_executable(${target_name} IMPORTED GLOBAL)
     set_target_properties(${target_name} PROPERTIES
-        IMPORTED_LOCATION "${scanner_executable}"
+        IMPORTED_LOCATION "${executable_location}"
     )
-    if (TARGET Wayland_external-install)
-        add_dependencies(${target_name} Wayland_external-install)
-    elseif (TARGET Wayland_external)
-        add_dependencies(${target_name} Wayland_external)
-    endif()
+    add_dependencies(${target_name} Wayland_external)
 endfunction()
 
-set(_wayland_can_use_pkgconfig TRUE)
+set(_wayland_use_external FALSE)
 pkg_check_modules(PC_Wayland_Client QUIET IMPORTED_TARGET wayland-client)
 pkg_check_modules(PC_Wayland_Server QUIET IMPORTED_TARGET wayland-server)
 pkg_check_modules(PC_Wayland_Cursor QUIET IMPORTED_TARGET wayland-cursor)
 pkg_check_modules(PC_Wayland_Egl QUIET IMPORTED_TARGET wayland-egl)
 pkg_check_modules(PC_Wayland_Scanner QUIET wayland-scanner)
+pkg_check_modules(PC_Wayland_Protocol QUIET wayland-protocols)
 
 if (PC_Wayland_Client_FOUND)
     set(Wayland_Client_FOUND TRUE)
@@ -80,28 +79,17 @@ if (PC_Wayland_Egl_FOUND)
 endif()
 if (PC_Wayland_Scanner_FOUND)
     pkg_get_variable(_Wayland_SCANNER_FROM_PC wayland-scanner wayland_scanner)
-    if (_Wayland_SCANNER_FROM_PC)
-        set(Wayland_SCANNER_EXECUTABLE "${_Wayland_SCANNER_FROM_PC}")
-    else()
-        pkg_get_variable(_Wayland_SCANNER_BINDIR wayland-scanner bindir)
-        find_program(Wayland_SCANNER_EXECUTABLE NAMES wayland-scanner HINTS "${_Wayland_SCANNER_BINDIR}")
-    endif()
-else()
-    find_program(Wayland_SCANNER_EXECUTABLE NAMES wayland-scanner)
-endif()
-if (Wayland_SCANNER_EXECUTABLE)
+    set(Wayland_SCANNER_EXECUTABLE "${_Wayland_SCANNER_FROM_PC}")
     set(Wayland_Scanner_FOUND TRUE)
 endif()
 
 foreach(_wayland_component IN LISTS _wayland_components)
     if (NOT Wayland_${_wayland_component}_FOUND)
-        set(_wayland_can_use_pkgconfig FALSE)
+        set(_wayland_use_external TRUE)
     endif()
 endforeach()
 
-if (_wayland_can_use_pkgconfig)
-    set(_wayland_use_external FALSE)
-
+if (NOT _wayland_use_external)
     set(Wayland_VERSION ${PC_Wayland_Client_VERSION})
     set(Wayland_INCLUDE_DIRS)
     foreach(_wayland_library_component IN ITEMS Client Server Cursor Egl)
@@ -120,43 +108,21 @@ if (_wayland_can_use_pkgconfig)
     set(Wayland_CURSOR_LIBRARY "${PC_Wayland_Cursor_LINK_LIBRARIES}")
     set(Wayland_EGL_LIBRARY "${PC_Wayland_Egl_LINK_LIBRARIES}")
 
-    if (PC_Wayland_Scanner_FOUND)
-        pkg_get_variable(Wayland_DATADIR wayland-scanner pkgdatadir)
+    if (PC_Wayland_Protocols_FOUND)
+        pkg_get_variable(Wayland_DATADIR wayland-protocols pkgdatadir)
     endif()
-else()
+else() # _wayland_use_external == TRUE
     set(Wayland_VERSION ${WAYLAND_FALLBACK_VERSION})
-    set(_wayland_use_external TRUE)
-    file(MAKE_DIRECTORY "${WAYLAND_STAGE_DIR}/include" "${WAYLAND_STAGE_DIR}/lib" "${WAYLAND_STAGE_DIR}/bin" "${WAYLAND_STAGE_DIR}/share/wayland")
+    file(MAKE_DIRECTORY
+        ${WAYLAND_STAGE_INCLUDEDIR}
+        ${WAYLAND_STAGE_LIBDIR}
+        ${WAYLAND_STAGE_BINDIR}
+        ${WAYLAND_STAGE_DATADIR})
 
     find_program(MESON meson)
     if (NOT MESON)
         message(FATAL_ERROR "Failed to find meson, which is required for fallback wayland build")
     endif()
-    find_program(NINJA ninja)
-    if (NOT NINJA)
-        message(FATAL_ERROR "Failed to find ninja, which is required for fallback wayland build")
-    endif()
-
-    ExternalProject_Add(Wayland_external
-        GIT_REPOSITORY https://gitlab.freedesktop.org/wayland/wayland.git
-        GIT_TAG ${WAYLAND_FALLBACK_VERSION}
-
-        CONFIGURE_COMMAND ${MESON} setup <BINARY_DIR> <SOURCE_DIR>
-            --prefix=${WAYLAND_STAGE_DIR}
-            --buildtype=release
-            -Ddocumentation=false
-            -Dtests=false
-        BUILD_COMMAND ${NINJA} -C <BINARY_DIR>
-        INSTALL_COMMAND ${NINJA} -C <BINARY_DIR> install
-        INSTALL_BYPRODUCTS
-            "${WAYLAND_STAGE_DIR}/lib/libwayland-client${CMAKE_SHARED_LIBRARY_SUFFIX}"
-            "${WAYLAND_STAGE_DIR}/lib/libwayland-server${CMAKE_SHARED_LIBRARY_SUFFIX}"
-            "${WAYLAND_STAGE_DIR}/lib/libwayland-cursor${CMAKE_SHARED_LIBRARY_SUFFIX}"
-            "${WAYLAND_STAGE_DIR}/lib/libwayland-egl${CMAKE_SHARED_LIBRARY_SUFFIX}"
-            "${WAYLAND_STAGE_DIR}/include/wayland-client-core.h"
-            "${WAYLAND_STAGE_DIR}/bin/wayland-scanner"
-        STEP_TARGETS configure build install
-    )
 
     set(Wayland_Client_FOUND TRUE)
     set(Wayland_Server_FOUND TRUE)
@@ -164,21 +130,44 @@ else()
     set(Wayland_Egl_FOUND TRUE)
     set(Wayland_Scanner_FOUND TRUE)
 
-    set(Wayland_INCLUDE_DIR "${WAYLAND_STAGE_DIR}/include")
+    set(Wayland_CLIENT_LIBRARY     "${WAYLAND_STAGE_LIBDIR}/libwayland-client${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(Wayland_SERVER_LIBRARY     "${WAYLAND_STAGE_LIBDIR}/libwayland-server${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(Wayland_CURSOR_LIBRARY     "${WAYLAND_STAGE_LIBDIR}/libwayland-cursor${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(Wayland_EGL_LIBRARY        "${WAYLAND_STAGE_LIBDIR}/libwayland-egl${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(Wayland_SCANNER_EXECUTABLE "${WAYLAND_STAGE_BINDIR}/wayland-scanner${CMAKE_EXEUCTABLE_SUFFIX}")
+
+    set(Wayland_INCLUDE_DIR "${WAYLAND_STAGE_INCLUDEDIR}")
     set(Wayland_INCLUDE_DIRS "${Wayland_INCLUDE_DIR}")
     set(Wayland_DEFINITIONS "")
-    set(Wayland_CLIENT_LIBRARY "${WAYLAND_STAGE_DIR}/lib/libwayland-client${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    set(Wayland_SERVER_LIBRARY "${WAYLAND_STAGE_DIR}/lib/libwayland-server${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    set(Wayland_CURSOR_LIBRARY "${WAYLAND_STAGE_DIR}/lib/libwayland-cursor${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    set(Wayland_EGL_LIBRARY "${WAYLAND_STAGE_DIR}/lib/libwayland-egl${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    set(Wayland_DATADIR "${WAYLAND_STAGE_DIR}/share/wayland")
-    set(Wayland_SCANNER_EXECUTABLE "${WAYLAND_STAGE_DIR}/bin/wayland-scanner")
+    set(Wayland_DATADIR "${WAYLAND_STAGE_DATADIR}")
+
+    ExternalProject_Add(Wayland_external
+        GIT_REPOSITORY https://gitlab.freedesktop.org/wayland/wayland.git
+        GIT_TAG ${WAYLAND_FALLBACK_VERSION}
+        UPDATE_DISCONNECTED TRUE
+
+        CONFIGURE_COMMAND ${MESON} setup <BINARY_DIR> <SOURCE_DIR>
+            --prefix=${WAYLAND_STAGE_DIR}
+            --buildtype=release
+            -Ddocumentation=false
+            -Dtests=false
+        BUILD_COMMAND ${MESON} compile -C <BINARY_DIR>
+        INSTALL_COMMAND ${MESON} install -C <BINARY_DIR>
+        BUILD_BYPRODUCTS
+            "${Wayland_CLIENT_LIBRARY}"
+            "${Wayland_SERVER_LIBRARY}"
+            "${Wayland_CURSOR_LIBRARY}"
+            "${Wayland_EGL_LIBRARY}"
+            "${WAYLAND_STAGE_INCLUDEDIR}/wayland-client.h"
+            "${Wayland_SCANNER_EXECUTABLE}"
+    )
 endif()
 
 _wayland_add_library_target(Client wayland::wayland-client wayland-client)
 _wayland_add_library_target(Server wayland::wayland-server wayland-server)
 _wayland_add_library_target(Cursor wayland::wayland-cursor wayland-cursor)
 _wayland_add_library_target(Egl wayland::wayland-egl wayland-egl)
+_wayland_add_executable_target(Wayland::Scanner "${Wayland_SCANNER_EXECUTABLE}")
 
 if (NOT TARGET Wayland::Client)
     add_library(Wayland::Client INTERFACE IMPORTED GLOBAL)
@@ -195,10 +184,6 @@ endif()
 if (NOT TARGET Wayland::Egl)
     add_library(Wayland::Egl INTERFACE IMPORTED GLOBAL)
     target_link_libraries(Wayland::Egl INTERFACE wayland::wayland-egl)
-endif()
-_wayland_add_scanner_target(wayland::wayland-scanner "${Wayland_SCANNER_EXECUTABLE}")
-if (NOT TARGET Wayland::Scanner)
-    _wayland_add_scanner_target(Wayland::Scanner "${Wayland_SCANNER_EXECUTABLE}")
 endif()
 
 set(Wayland_LIBRARIES)
