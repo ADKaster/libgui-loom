@@ -36,12 +36,17 @@ if (LOOM_BACKEND STREQUAL "AppKit")
     target_compile_options(Loom PRIVATE -fobjc-arc)
     target_compile_definitions(Loom PRIVATE LOOM_BACKEND_APPKIT)
 elseif (LOOM_BACKEND STREQUAL "Wayland")
+
+    find_package(Wayland REQUIRED COMPONENTS Client Scanner)
+
     add_executable(Loom
         Wayland/main.cpp
         Wayland/ScreenLayout.cpp
         Wayland/WindowServerConnectionProxy.cpp
     )
     target_compile_definitions(Loom PRIVATE LOOM_BACKEND_WAYLAND)
+
+    target_link_libraries(Loom PRIVATE Wayland::Client)
 endif()
 
 target_sources(Loom PRIVATE

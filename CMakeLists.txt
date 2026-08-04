@@ -18,6 +18,7 @@ set(SERENITY_SOURCE_DIR $ENV{SERENITY_SOURCE_DIR})
 set(SerenityOS_SOURCE_DIR "${SERENITY_SOURCE_DIR}" CACHE STRING "")
 
 list(APPEND CMAKE_MODULE_PATH "${SERENITY_SOURCE_DIR}/Meta/CMake")
+list(APPEND CMAKE_MODULE_PATH "${libgui_loom_SOURCE_DIR}/meta/CMake")
 
 if(NOT COMMAND serenity_option)
     macro(serenity_option)
