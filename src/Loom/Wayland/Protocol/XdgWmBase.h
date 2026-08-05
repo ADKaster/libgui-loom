@@ -21,9 +21,10 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] xdg_wm_base* ptr() const { return m_wm_base; }
 
+    void set_default_listener();
+
 private:
     xdg_wm_base* m_wm_base;
 };
 
 }
-

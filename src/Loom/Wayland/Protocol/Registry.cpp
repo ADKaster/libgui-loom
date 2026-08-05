@@ -18,10 +18,6 @@ const wl_registry_listener Registry::s_listener {
     &Registry::global_removed_callback,
 };
 
-static void wm_base_ping(void*, xdg_wm_base *xdg_wm_base, uint32_t serial) { xdg_wm_base_pong(xdg_wm_base, serial); }
-
-static const constinit xdg_wm_base_listener s_wm_base_listener = { wm_base_ping };
-
 Registry::Registry(wl_display* display, wl_registry* registry)
     : m_display(display)
     , m_registry(registry)
@@ -77,7 +73,7 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
         that->m_compositor = make<Compositor>(that->bind<wl_compositor>(name, &wl_compositor_interface, version));
     } else if (interface == xdg_wm_base_name) {
         that->m_xdg_wm_base = make<XdgWmBase>(that->bind<xdg_wm_base>(name, &xdg_wm_base_interface, version));
-        xdg_wm_base_add_listener(that->m_xdg_wm_base->ptr(), &s_wm_base_listener, nullptr);
+        that->m_xdg_wm_base->set_default_listener();
     } else if (interface == fixes_name) {
         that->m_fixes = that->bind<wl_fixes>(name, &wl_fixes_interface, min(version, 2));
     } else if (interface == shm_name) {
