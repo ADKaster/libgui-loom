@@ -57,6 +57,12 @@ ErrorOr<NonnullOwnPtr<Registry>> Registry::try_create(wl_display* display)
     return registry;
 }
 
+template<typename T>
+T* Registry::bind(u32 name, wl_interface const* interface, u32 version)
+{
+    return static_cast<T*>(wl_registry_bind(m_registry, name, interface, version));
+}
+
 void Registry::global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version)
 {
     auto* that = static_cast<Registry*>(data);
@@ -67,14 +73,14 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
     static StringView shm_name = { wl_shm_interface.name, strlen(wl_shm_interface.name) };
 
     if (interface == compositor_name) {
-        that->m_compositor = static_cast<wl_compositor*>(wl_registry_bind(registry, name, &wl_compositor_interface, version));
+        that->m_compositor = that->bind<wl_compositor>(name, &wl_compositor_interface, version);
     } else if (interface == xdg_wm_base_name) {
-        that->m_xdg_wm_base = static_cast<xdg_wm_base*>(wl_registry_bind(registry, name, &xdg_wm_base_interface, version));
+        that->m_xdg_wm_base = that->bind<xdg_wm_base>(name, &xdg_wm_base_interface, version);
         xdg_wm_base_add_listener(that->m_xdg_wm_base, &s_wm_base_listener, nullptr);
     } else if (interface == fixes_name) {
-        that->m_fixes = static_cast<wl_fixes*>(wl_registry_bind(registry, name, &wl_fixes_interface, min(version, 2)));
+        that->m_fixes = that->bind<wl_fixes>(name, &wl_fixes_interface, min(version, 2));
     } else if (interface == shm_name) {
-        that->m_shm = static_cast<wl_shm*>(wl_registry_bind(registry, name, &wl_shm_interface, version));
+        that->m_shm = that->bind<wl_shm>(name, &wl_shm_interface, version);
     } else {
         dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }

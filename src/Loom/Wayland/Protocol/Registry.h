@@ -28,6 +28,9 @@ private:
     static void global_removed_callback(void* data, wl_registry* registry, u32 name);
     static const wl_registry_listener s_listener;
 
+    template<typename T>
+    T* bind(u32 name, wl_interface const*, u32 version);
+
     wl_display* m_display { nullptr };
     wl_registry* m_registry { nullptr };
 
