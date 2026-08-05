@@ -41,18 +41,18 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
 
     set(XDG_SHELL_XML "${Wayland_Protocols_DATADIR}/stable/xdg-shell/xdg-shell.xml")
     add_custom_command(
-        OUTPUT xdg-shell-client.h
+        OUTPUT wayland-protocols/xdg-shell-client.h
         COMMAND ${Wayland_SCANNER_EXECUTABLE} client-header
                 ${XDG_SHELL_XML}
-                xdg-shell-client.h
+                ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell-client.h
         DEPENDS Wayland::Protocols
         COMMENT "Generating xdg-shell client header"
     )
     add_custom_command(
-        OUTPUT xdg-shell.c
+        OUTPUT wayland-protocols/xdg-shell.c
         COMMAND ${Wayland_SCANNER_EXECUTABLE} private-code
                 ${XDG_SHELL_XML}
-                xdg-shell.c
+                ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell.c
         DEPENDS Wayland::Protocols
         COMMENT "Generating xdg-shell protocol source"
     )
@@ -62,11 +62,11 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
         Wayland/ScreenLayout.cpp
         Wayland/WindowServerConnectionProxy.cpp
         Wayland/WaylandRegistry.cpp
-        ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell.c
-        ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell-client.h
+        ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell.c
+        ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell-client.h
     )
     target_compile_definitions(Loom PRIVATE LOOM_BACKEND_WAYLAND)
-    target_include_directories(Loom PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_include_directories(Loom SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols)
 
     target_link_libraries(Loom PRIVATE Wayland::Client)
 endif()

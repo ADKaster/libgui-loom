@@ -10,11 +10,7 @@
 #include <AK/Error.h>
 #include <AK/NonnullOwnPtr.h>
 #include <wayland-client.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#include "xdg-shell-client.h"
-#pragma GCC diagnostic pop
+#include <xdg-shell-client.h>
 
 namespace Loom {
 
