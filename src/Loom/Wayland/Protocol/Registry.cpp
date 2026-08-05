@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <Loom/Wayland/Protocol/Compositor.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 
 namespace Loom::Wayland::Protocol {
@@ -35,7 +36,6 @@ Registry::~Registry()
     if (m_fixes)
         wl_fixes_destroy(m_fixes);
 
-    wl_compositor_destroy(m_compositor);
     wl_shm_destroy(m_shm);
     xdg_wm_base_destroy(m_xdg_wm_base);
 }
@@ -66,6 +66,7 @@ T* Registry::bind(u32 name, wl_interface const* interface, u32 version)
 void Registry::global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version)
 {
     auto* that = static_cast<Registry*>(data);
+    VERIFY(that->m_registry == registry);
 
     static StringView compositor_name = { wl_compositor_interface.name, strlen(wl_compositor_interface.name) };
     static StringView xdg_wm_base_name = { xdg_wm_base_interface.name, strlen(xdg_wm_base_interface.name) };
@@ -73,7 +74,7 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
     static StringView shm_name = { wl_shm_interface.name, strlen(wl_shm_interface.name) };
 
     if (interface == compositor_name) {
-        that->m_compositor = that->bind<wl_compositor>(name, &wl_compositor_interface, version);
+        that->m_compositor = make<Compositor>(that->bind<wl_compositor>(name, &wl_compositor_interface, version));
     } else if (interface == xdg_wm_base_name) {
         that->m_xdg_wm_base = that->bind<xdg_wm_base>(name, &xdg_wm_base_interface, version);
         xdg_wm_base_add_listener(that->m_xdg_wm_base, &s_wm_base_listener, nullptr);

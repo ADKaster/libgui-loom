@@ -9,10 +9,13 @@
 #include <AK/Types.h>
 #include <AK/Error.h>
 #include <AK/NonnullOwnPtr.h>
+#include <AK/OwnPtr.h>
 #include <wayland-client.h>
 #include <xdg-shell-client.h>
 
 namespace Loom::Wayland::Protocol {
+
+class Compositor;
 
 class Registry {
 
@@ -20,6 +23,8 @@ public:
     ~Registry();
 
     static ErrorOr<NonnullOwnPtr<Registry>> try_create(wl_display*);
+
+    Compositor& compositor() const { return *m_compositor; }
 
 private:
     Registry(wl_display*, wl_registry*);
@@ -36,7 +41,7 @@ private:
 
     wl_fixes* m_fixes { nullptr };
 
-    wl_compositor* m_compositor { nullptr };
+    OwnPtr<Compositor> m_compositor;
     wl_shm* m_shm { nullptr };
     xdg_wm_base* m_xdg_wm_base { nullptr };
 };

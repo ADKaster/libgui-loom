@@ -62,6 +62,9 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
         Wayland/ScreenLayout.cpp
         Wayland/WindowServerConnectionProxy.cpp
         Wayland/Protocol/Registry.cpp
+        Wayland/Protocol/Compositor.cpp
+        Wayland/Protocol/Compositor.h
+
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell.c
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell-client.h
     )
