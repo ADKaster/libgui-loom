@@ -8,6 +8,8 @@
 
 namespace Loom {
 
+#define WAYLAND_REGISTRY_DEBUG 0
+
 const wl_registry_listener WaylandRegistry::s_listener {
     &WaylandRegistry::global_callback,
     &WaylandRegistry::global_removed_callback,
@@ -58,7 +60,7 @@ void WaylandRegistry::global_callback(void* data, wl_registry* registry, u32 nam
         xdg_wm_base_add_listener(that->m_xdg_wm_base, &wm_base_listener, nullptr);
     }
     else {
-        dbgln("WaylandRegistry: Unknown interface: {}, version {}, name {}", interface, version, name);
+        dbgln_if(WAYLAND_REGISTRY_DEBUG, "WaylandRegistry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }
 }
 
