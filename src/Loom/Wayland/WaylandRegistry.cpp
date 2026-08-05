@@ -34,6 +34,9 @@ WaylandRegistry::~WaylandRegistry()
 
     if (m_fixes)
         wl_fixes_destroy(m_fixes);
+
+    wl_compositor_destroy(m_compositor);
+    xdg_wm_base_destroy(m_xdg_wm_base);
 }
 
 ErrorOr<NonnullOwnPtr<WaylandRegistry>> WaylandRegistry::try_create(wl_display* display)
