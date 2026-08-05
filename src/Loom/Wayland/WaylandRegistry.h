@@ -34,6 +34,7 @@ private:
     wl_fixes* m_fixes { nullptr };
 
     wl_compositor* m_compositor { nullptr };
+    wl_shm* m_shm { nullptr };
     xdg_wm_base* m_xdg_wm_base { nullptr };
 };
 
