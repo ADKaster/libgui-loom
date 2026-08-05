@@ -5,8 +5,11 @@
  */
 
 #include <Loom/IPCBridge.h>
-
+#include <Loom/Wayland/WaylandRegistry.h>
 #include <LibCore/EventLoop.h>
+#include <LibCore/Timer.h>
+
+#include <wayland-client.h>
 
 int main(int argc, char const* argv[])
 {
@@ -14,8 +17,25 @@ int main(int argc, char const* argv[])
 
     auto ipc_bridge = Loom::IPCBridge::create();
 
+    auto* display = wl_display_connect(nullptr);
+    if (display)
+        dbgln("connected!");
+    else
+        dbgln("failed to connect!");
+
+    ScopeGuard disconnect = [display] {
+        wl_display_disconnect(display);
+    };
+
     (void)argc;
     (void)argv;
 
-    return event_loop.exec();
+    auto registry = MUST(Loom::WaylandRegistry::try_create(display));
+
+    auto timer = Core::Timer::create_single_shot(1000, [display] {
+        Core::EventLoop::current().quit(0);
+    });
+    timer->start();
+
+   return event_loop.exec();
 }

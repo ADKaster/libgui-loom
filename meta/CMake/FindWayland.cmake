@@ -8,11 +8,12 @@ set(WAYLAND_STAGE_DIR ${CMAKE_BINARY_DIR}/wayland_staging)
 set(WAYLAND_STAGE_LIBDIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(WAYLAND_STAGE_BINDIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_BINDIR})
 set(WAYLAND_STAGE_INCLUDEDIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
-set(WAYLAND_STAGE_DATADIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_DATADIR}/wayland)
+set(WAYLAND_STAGE_DATADIR ${WAYLAND_STAGE_DIR}/${CMAKE_INSTALL_DATADIR})
 
 set(WAYLAND_FALLBACK_VERSION 1.26.0)
+set(WAYLAND_PROTOCOLS_FALLBACK_VERSION 1.49)
 
-set(_wayland_known_components Client Server Cursor Egl Scanner)
+set(_wayland_known_components Client Server Cursor Egl Scanner Protocols)
 if (Wayland_FIND_COMPONENTS)
     set(_wayland_components ${Wayland_FIND_COMPONENTS})
 else()
@@ -63,7 +64,7 @@ pkg_check_modules(PC_Wayland_Server QUIET IMPORTED_TARGET wayland-server)
 pkg_check_modules(PC_Wayland_Cursor QUIET IMPORTED_TARGET wayland-cursor)
 pkg_check_modules(PC_Wayland_Egl QUIET IMPORTED_TARGET wayland-egl)
 pkg_check_modules(PC_Wayland_Scanner QUIET wayland-scanner)
-pkg_check_modules(PC_Wayland_Protocol QUIET wayland-protocols)
+pkg_check_modules(PC_Wayland_Protocols QUIET wayland-protocols)
 
 if (PC_Wayland_Client_FOUND)
     set(Wayland_Client_FOUND TRUE)
@@ -81,6 +82,9 @@ if (PC_Wayland_Scanner_FOUND)
     pkg_get_variable(_Wayland_SCANNER_FROM_PC wayland-scanner wayland_scanner)
     set(Wayland_SCANNER_EXECUTABLE "${_Wayland_SCANNER_FROM_PC}")
     set(Wayland_Scanner_FOUND TRUE)
+endif()
+if (PC_Wayland_Protocols_FOUND)
+    set(Wayland_Protocols_FOUND TRUE)
 endif()
 
 foreach(_wayland_component IN LISTS _wayland_components)
@@ -108,9 +112,8 @@ if (NOT _wayland_use_external)
     set(Wayland_CURSOR_LIBRARY "${PC_Wayland_Cursor_LINK_LIBRARIES}")
     set(Wayland_EGL_LIBRARY "${PC_Wayland_Egl_LINK_LIBRARIES}")
 
-    if (PC_Wayland_Protocols_FOUND)
-        pkg_get_variable(Wayland_DATADIR wayland-protocols pkgdatadir)
-    endif()
+    pkg_get_variable(Wayland_DATADIR wayland-client pkgdatadir)
+    pkg_get_variable(Wayland_Protocols_DATADIR wayland-protocols pkgdatadir)
 else() # _wayland_use_external == TRUE
     set(Wayland_VERSION ${WAYLAND_FALLBACK_VERSION})
     file(MAKE_DIRECTORY
@@ -129,6 +132,7 @@ else() # _wayland_use_external == TRUE
     set(Wayland_Cursor_FOUND TRUE)
     set(Wayland_Egl_FOUND TRUE)
     set(Wayland_Scanner_FOUND TRUE)
+    set(Wayland_Protocols_FOUND TRUE)
 
     set(Wayland_CLIENT_LIBRARY     "${WAYLAND_STAGE_LIBDIR}/libwayland-client${CMAKE_SHARED_LIBRARY_SUFFIX}")
     set(Wayland_SERVER_LIBRARY     "${WAYLAND_STAGE_LIBDIR}/libwayland-server${CMAKE_SHARED_LIBRARY_SUFFIX}")
@@ -139,7 +143,7 @@ else() # _wayland_use_external == TRUE
     set(Wayland_INCLUDE_DIR "${WAYLAND_STAGE_INCLUDEDIR}")
     set(Wayland_INCLUDE_DIRS "${Wayland_INCLUDE_DIR}")
     set(Wayland_DEFINITIONS "")
-    set(Wayland_DATADIR "${WAYLAND_STAGE_DATADIR}")
+    set(Wayland_DATADIR "${WAYLAND_STAGE_DATADIR}/wayland")
 
     ExternalProject_Add(Wayland_external
         GIT_REPOSITORY https://gitlab.freedesktop.org/wayland/wayland.git
@@ -161,6 +165,20 @@ else() # _wayland_use_external == TRUE
             "${WAYLAND_STAGE_INCLUDEDIR}/wayland-client.h"
             "${Wayland_SCANNER_EXECUTABLE}"
     )
+
+    ExternalProject_Add(Wayland_protocols_external
+        GIT_REPOSITORY https://gitlab.freedesktop.org/wayland/wayland-protocols.git
+        GIT_TAG ${WAYLAND_PROTOCOLS_FALLBACK_VERSION}
+        UPDATE_DISCONNECTED TRUE
+
+        CONFIGURE_COMMAND ${MESON} setup <BINARY_DIR> <SOURCE_DIR>
+            --prefix=${WAYLAND_STAGE_DIR}
+            -Dtests=false
+        BUILD_COMMAND ${MESON} compile -C <BINARY_DIR>
+        INSTALL_COMMAND ${MESON} install -C <BINARY_DIR>
+    )
+
+    set(Wayland_Protocols_DATADIR ${WAYLAND_STAGE_DATADIR}/wayland-protocols)
 endif()
 
 _wayland_add_library_target(Client wayland::wayland-client wayland-client)
@@ -185,6 +203,12 @@ if (NOT TARGET Wayland::Egl)
     add_library(Wayland::Egl INTERFACE IMPORTED GLOBAL)
     target_link_libraries(Wayland::Egl INTERFACE wayland::wayland-egl)
 endif()
+if (NOT TARGET Wayland::Protocols)
+    add_library(Wayland::Protocols INTERFACE IMPORTED GLOBAL)
+    if (TARGET Wayland_protocols_external)
+        add_dependencies(Wayland::Protocols Wayland_protocols_external)
+    endif()
+endif()
 
 set(Wayland_LIBRARIES)
 set(Wayland_TARGETS)
@@ -203,6 +227,8 @@ foreach(_wayland_component IN LISTS _wayland_components)
         list(APPEND Wayland_TARGETS Wayland::Egl)
     elseif (_wayland_component STREQUAL "Scanner")
         list(APPEND Wayland_TARGETS Wayland::Scanner)
+    elseif (_wayland_component STREQUAL "Protocols")
+        list(APPEND Wayland_TARGETS Wayland::Protocols)
     endif()
 endforeach()
 

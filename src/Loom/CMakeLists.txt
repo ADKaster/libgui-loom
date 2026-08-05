@@ -37,14 +37,36 @@ if (LOOM_BACKEND STREQUAL "AppKit")
     target_compile_definitions(Loom PRIVATE LOOM_BACKEND_APPKIT)
 elseif (LOOM_BACKEND STREQUAL "Wayland")
 
-    find_package(Wayland REQUIRED COMPONENTS Client Scanner)
+    find_package(Wayland REQUIRED COMPONENTS Client Protocols Scanner)
+
+    set(XDG_SHELL_XML "${Wayland_Protocols_DATADIR}/stable/xdg-shell/xdg-shell.xml")
+    add_custom_command(
+        OUTPUT xdg-shell-client.h
+        COMMAND ${Wayland_SCANNER_EXECUTABLE} client-header
+                ${XDG_SHELL_XML}
+                xdg-shell-client.h
+        DEPENDS Wayland::Protocols
+        COMMENT "Generating xdg-shell client header"
+    )
+    add_custom_command(
+        OUTPUT xdg-shell.c
+        COMMAND ${Wayland_SCANNER_EXECUTABLE} private-code
+                ${XDG_SHELL_XML}
+                xdg-shell.c
+        DEPENDS Wayland::Protocols
+        COMMENT "Generating xdg-shell protocol source"
+    )
 
     add_executable(Loom
         Wayland/main.cpp
         Wayland/ScreenLayout.cpp
         Wayland/WindowServerConnectionProxy.cpp
+        Wayland/WaylandRegistry.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell.c
+        ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell-client.h
     )
     target_compile_definitions(Loom PRIVATE LOOM_BACKEND_WAYLAND)
+    target_include_directories(Loom PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
     target_link_libraries(Loom PRIVATE Wayland::Client)
 endif()
