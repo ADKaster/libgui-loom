@@ -35,6 +35,8 @@ private:
     wl_display* m_display { nullptr };
     wl_registry* m_registry { nullptr };
 
+    wl_fixes* m_fixes { nullptr };
+
     wl_compositor* m_compositor { nullptr };
     xdg_wm_base* m_xdg_wm_base { nullptr };
 };

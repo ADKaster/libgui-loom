@@ -27,7 +27,13 @@ WaylandRegistry::WaylandRegistry(wl_display* display, wl_registry* registry)
 
 WaylandRegistry::~WaylandRegistry()
 {
+    if (m_fixes)
+        wl_fixes_destroy_registry(m_fixes, m_registry);
+
     wl_registry_destroy(m_registry);
+
+    if (m_fixes)
+        wl_fixes_destroy(m_fixes);
 }
 
 ErrorOr<NonnullOwnPtr<WaylandRegistry>> WaylandRegistry::try_create(wl_display* display)
@@ -52,20 +58,28 @@ void WaylandRegistry::global_callback(void* data, wl_registry* registry, u32 nam
 
     static StringView compositor_name = { wl_compositor_interface.name, strlen(wl_compositor_interface.name) };
     static StringView xdg_wm_base_name = { xdg_wm_base_interface.name, strlen(xdg_wm_base_interface.name) };
+    static StringView fixes_name = { wl_fixes_interface.name, strlen(wl_fixes_interface.name) };
 
     if (interface == compositor_name) {
         that->m_compositor = static_cast<wl_compositor*>(wl_registry_bind(registry, name, &wl_compositor_interface, version));
     } else if (interface == xdg_wm_base_name) {
         that->m_xdg_wm_base = static_cast<xdg_wm_base*>(wl_registry_bind(registry, name, &xdg_wm_base_interface, version));
         xdg_wm_base_add_listener(that->m_xdg_wm_base, &wm_base_listener, nullptr);
+    } else if (interface == fixes_name) {
+        that->m_fixes = static_cast<wl_fixes*>(wl_registry_bind(registry, name, &wl_fixes_interface, min(version, 2)));
     }
     else {
         dbgln_if(WAYLAND_REGISTRY_DEBUG, "WaylandRegistry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }
 }
 
-void WaylandRegistry::global_removed_callback(void*, wl_registry*, u32)
+void WaylandRegistry::global_removed_callback(void* data, wl_registry* registry, u32 name)
 {
+    auto* that = static_cast<WaylandRegistry*>(data);
+    VERIFY(that->m_registry == registry);
+
+    if (that->m_fixes && wl_fixes_get_version(that->m_fixes) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
+        wl_fixes_ack_global_remove(that->m_fixes, registry, name);
 }
 
 }
