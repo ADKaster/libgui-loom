@@ -6,6 +6,7 @@
 
 #include <Loom/Wayland/Protocol/Compositor.h>
 #include <Loom/Wayland/Protocol/Registry.h>
+#include <Loom/Wayland/Protocol/Shm.h>
 
 namespace Loom::Wayland::Protocol {
 
@@ -36,7 +37,6 @@ Registry::~Registry()
     if (m_fixes)
         wl_fixes_destroy(m_fixes);
 
-    wl_shm_destroy(m_shm);
     xdg_wm_base_destroy(m_xdg_wm_base);
 }
 
@@ -81,7 +81,7 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
     } else if (interface == fixes_name) {
         that->m_fixes = that->bind<wl_fixes>(name, &wl_fixes_interface, min(version, 2));
     } else if (interface == shm_name) {
-        that->m_shm = that->bind<wl_shm>(name, &wl_shm_interface, version);
+        that->m_shm = make<Shm>(that->bind<wl_shm>(name, &wl_shm_interface, version));
     } else {
         dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }
