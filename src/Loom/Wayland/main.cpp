@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <Loom/IPCBridge.h>
-#include <Loom/Wayland/WaylandRegistry.h>
 #include <LibCore/EventLoop.h>
 #include <LibCore/Timer.h>
+#include <Loom/IPCBridge.h>
+#include <Loom/Wayland/Protocol/Registry.h>
 
 #include <wayland-client.h>
 
@@ -30,7 +30,7 @@ int main(int argc, char const* argv[])
     (void)argc;
     (void)argv;
 
-    auto registry = MUST(Loom::WaylandRegistry::try_create(display));
+    auto registry = MUST(Loom::Wayland::Protocol::Registry::try_create(display));
 
     auto timer = Core::Timer::create_single_shot(1000, [display] {
         Core::EventLoop::current().quit(0);

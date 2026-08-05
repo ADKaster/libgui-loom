@@ -12,17 +12,17 @@
 #include <wayland-client.h>
 #include <xdg-shell-client.h>
 
-namespace Loom {
+namespace Loom::Wayland::Protocol {
 
-class WaylandRegistry {
+class Registry {
 
 public:
-    ~WaylandRegistry();
+    ~Registry();
 
-    static ErrorOr<NonnullOwnPtr<WaylandRegistry>> try_create(wl_display*);
+    static ErrorOr<NonnullOwnPtr<Registry>> try_create(wl_display*);
 
 private:
-    WaylandRegistry(wl_display*, wl_registry*);
+    Registry(wl_display*, wl_registry*);
 
     static void global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version);
     static void global_removed_callback(void* data, wl_registry* registry, u32 name);

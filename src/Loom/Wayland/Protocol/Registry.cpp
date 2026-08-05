@@ -4,28 +4,28 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <Loom/Wayland/WaylandRegistry.h>
+#include <Loom/Wayland/Protocol/Registry.h>
 
-namespace Loom {
+namespace Loom::Wayland::Protocol {
 
 #define WAYLAND_REGISTRY_DEBUG 0
 
-const wl_registry_listener WaylandRegistry::s_listener {
-    &WaylandRegistry::global_callback,
-    &WaylandRegistry::global_removed_callback,
+const wl_registry_listener Registry::s_listener {
+    &Registry::global_callback,
+    &Registry::global_removed_callback,
 };
 
 static void wm_base_ping(void*, xdg_wm_base *xdg_wm_base, uint32_t serial) { xdg_wm_base_pong(xdg_wm_base, serial); }
 
 static const constinit xdg_wm_base_listener s_wm_base_listener = { wm_base_ping };
 
-WaylandRegistry::WaylandRegistry(wl_display* display, wl_registry* registry)
+Registry::Registry(wl_display* display, wl_registry* registry)
     : m_display(display)
     , m_registry(registry)
 {
 }
 
-WaylandRegistry::~WaylandRegistry()
+Registry::~Registry()
 {
     if (m_fixes)
         wl_fixes_destroy_registry(m_fixes, m_registry);
@@ -40,11 +40,11 @@ WaylandRegistry::~WaylandRegistry()
     xdg_wm_base_destroy(m_xdg_wm_base);
 }
 
-ErrorOr<NonnullOwnPtr<WaylandRegistry>> WaylandRegistry::try_create(wl_display* display)
+ErrorOr<NonnullOwnPtr<Registry>> Registry::try_create(wl_display* display)
 {
     auto* wayland_registry = wl_display_get_registry(display);
     VERIFY(wayland_registry);
-    auto registry = TRY(adopt_nonnull_own_or_enomem(new (nothrow) WaylandRegistry(display, wayland_registry)));
+    auto registry = TRY(adopt_nonnull_own_or_enomem(new (nothrow) Registry(display, wayland_registry)));
 
     wl_registry_add_listener(registry->m_registry, &s_listener, registry.ptr());
 
@@ -57,9 +57,9 @@ ErrorOr<NonnullOwnPtr<WaylandRegistry>> WaylandRegistry::try_create(wl_display* 
     return registry;
 }
 
-void WaylandRegistry::global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version)
+void Registry::global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version)
 {
-    auto* that = static_cast<WaylandRegistry*>(data);
+    auto* that = static_cast<Registry*>(data);
 
     static StringView compositor_name = { wl_compositor_interface.name, strlen(wl_compositor_interface.name) };
     static StringView xdg_wm_base_name = { xdg_wm_base_interface.name, strlen(xdg_wm_base_interface.name) };
@@ -76,13 +76,13 @@ void WaylandRegistry::global_callback(void* data, wl_registry* registry, u32 nam
     } else if (interface == shm_name) {
         that->m_shm = static_cast<wl_shm*>(wl_registry_bind(registry, name, &wl_shm_interface, version));
     } else {
-        dbgln_if(WAYLAND_REGISTRY_DEBUG, "WaylandRegistry: Unknown interface: {}, version {}, name {}", interface, version, name);
+        dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }
 }
 
-void WaylandRegistry::global_removed_callback(void* data, wl_registry* registry, u32 name)
+void Registry::global_removed_callback(void* data, wl_registry* registry, u32 name)
 {
-    auto* that = static_cast<WaylandRegistry*>(data);
+    auto* that = static_cast<Registry*>(data);
     VERIFY(that->m_registry == registry);
 
     if (that->m_fixes && wl_fixes_get_version(that->m_fixes) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
