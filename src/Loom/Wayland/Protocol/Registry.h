@@ -17,6 +17,7 @@ namespace Loom::Wayland::Protocol {
 
 class Compositor;
 class Shm;
+class XdgWmBase;
 
 class Registry {
 
@@ -27,6 +28,7 @@ public:
 
     [[nodiscard]] Compositor& compositor() const { return *m_compositor; }
     [[nodiscard]] Shm& shm() const { return *m_shm; }
+    [[nodiscard]] XdgWmBase& wm_base() const { return *m_xdg_wm_base; }
 
 private:
     Registry(wl_display*, wl_registry*);
@@ -45,7 +47,7 @@ private:
 
     OwnPtr<Compositor> m_compositor;
     OwnPtr<Shm> m_shm;
-    xdg_wm_base* m_xdg_wm_base { nullptr };
+    OwnPtr<XdgWmBase> m_xdg_wm_base;
 };
 
 }

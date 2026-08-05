@@ -66,6 +66,8 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
         Wayland/Protocol/Compositor.h
         Wayland/Protocol/Shm.cpp
         Wayland/Protocol/Shm.h
+        Wayland/Protocol/XdgWmBase.cpp
+        Wayland/Protocol/XdgWmBase.h
 
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell.c
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell-client.h

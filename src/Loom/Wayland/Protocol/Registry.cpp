@@ -7,6 +7,7 @@
 #include <Loom/Wayland/Protocol/Compositor.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Shm.h>
+#include <Loom/Wayland/Protocol/XdgWmBase.h>
 
 namespace Loom::Wayland::Protocol {
 
@@ -37,7 +38,6 @@ Registry::~Registry()
     if (m_fixes)
         wl_fixes_destroy(m_fixes);
 
-    xdg_wm_base_destroy(m_xdg_wm_base);
 }
 
 ErrorOr<NonnullOwnPtr<Registry>> Registry::try_create(wl_display* display)
@@ -76,8 +76,8 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
     if (interface == compositor_name) {
         that->m_compositor = make<Compositor>(that->bind<wl_compositor>(name, &wl_compositor_interface, version));
     } else if (interface == xdg_wm_base_name) {
-        that->m_xdg_wm_base = that->bind<xdg_wm_base>(name, &xdg_wm_base_interface, version);
-        xdg_wm_base_add_listener(that->m_xdg_wm_base, &s_wm_base_listener, nullptr);
+        that->m_xdg_wm_base = make<XdgWmBase>(that->bind<xdg_wm_base>(name, &xdg_wm_base_interface, version));
+        xdg_wm_base_add_listener(that->m_xdg_wm_base->ptr(), &s_wm_base_listener, nullptr);
     } else if (interface == fixes_name) {
         that->m_fixes = that->bind<wl_fixes>(name, &wl_fixes_interface, min(version, 2));
     } else if (interface == shm_name) {
