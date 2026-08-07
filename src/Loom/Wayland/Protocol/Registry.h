@@ -27,6 +27,8 @@ public:
 
     static ErrorOr<NonnullOwnPtr<Registry>> try_create(wl_display*);
 
+    RETURNS_NONNULL [[nodiscard]] wl_registry* ptr() const { return m_registry; }
+
     [[nodiscard]] Compositor& compositor() const { return *m_compositor; }
     [[nodiscard]] Shm& shm() const { return *m_shm; }
     [[nodiscard]] Fixes& fixes() const { return *m_fixes; }

@@ -28,7 +28,7 @@ Registry::Registry(wl_display* display, wl_registry* registry)
 Registry::~Registry()
 {
     if (m_fixes)
-        wl_fixes_destroy_registry(m_fixes->ptr(), m_registry);
+        m_fixes->destroy_registry(*this);
 
     wl_registry_destroy(m_registry);
 }
@@ -80,8 +80,8 @@ void Registry::global_removed_callback(void* data, wl_registry* registry, u32 na
     auto* that = static_cast<Registry*>(data);
     VERIFY(that->m_registry == registry);
 
-    if (that->m_fixes && wl_fixes_get_version(that->m_fixes->ptr()) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
-        wl_fixes_ack_global_remove(that->m_fixes->ptr(), registry, name);
+    if (that->m_fixes && that->m_fixes->version() >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
+        that->m_fixes->ack_global_remove(*that, name);
 }
 
 }
