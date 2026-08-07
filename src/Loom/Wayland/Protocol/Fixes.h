@@ -8,6 +8,7 @@
 
 #include <AK/Noncopyable.h>
 #include <AK/Platform.h>
+#include <Loom/Wayland/Protocol/Interface.h>
 #include <wayland-client.h>
 
 namespace Loom::Wayland::Protocol {
@@ -16,6 +17,8 @@ class Fixes {
     AK_MAKE_NONCOPYABLE(Fixes);
     AK_MAKE_NONMOVABLE(Fixes);
 public:
+    WAYLAND_INTERFACE(wl_fixes);
+
     explicit Fixes(wl_fixes* fixes);
     ~Fixes();
 

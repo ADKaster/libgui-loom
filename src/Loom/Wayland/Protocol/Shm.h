@@ -8,6 +8,7 @@
 
 #include <AK/Platform.h>
 #include <AK/Noncopyable.h>
+#include <Loom/Wayland/Protocol/Interface.h>
 #include <wayland-client.h>
 
 namespace Loom::Wayland::Protocol {
@@ -16,6 +17,8 @@ class Shm {
     AK_MAKE_NONCOPYABLE(Shm);
     AK_MAKE_NONMOVABLE(Shm);
 public:
+    WAYLAND_INTERFACE(wl_shm);
+
     explicit Shm(wl_shm* shm);
     ~Shm();
 

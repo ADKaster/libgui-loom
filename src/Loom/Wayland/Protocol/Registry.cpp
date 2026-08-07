@@ -51,9 +51,9 @@ ErrorOr<NonnullOwnPtr<Registry>> Registry::try_create(wl_display* display)
 }
 
 template<typename T>
-T* Registry::bind(u32 name, wl_interface const* interface, u32 version)
+OwnPtr<T> Registry::bind(u32 name, u32 version)
 {
-    return static_cast<T*>(wl_registry_bind(m_registry, name, interface, version));
+    return make<T>(static_cast<T::InterfaceType*>(wl_registry_bind(m_registry, name, T::interface, version)));
 }
 
 void Registry::global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version)
@@ -61,20 +61,15 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
     auto* that = static_cast<Registry*>(data);
     VERIFY(that->m_registry == registry);
 
-    static StringView compositor_name = { wl_compositor_interface.name, strlen(wl_compositor_interface.name) };
-    static StringView xdg_wm_base_name = { xdg_wm_base_interface.name, strlen(xdg_wm_base_interface.name) };
-    static StringView fixes_name = { wl_fixes_interface.name, strlen(wl_fixes_interface.name) };
-    static StringView shm_name = { wl_shm_interface.name, strlen(wl_shm_interface.name) };
-
-    if (interface == compositor_name) {
-        that->m_compositor = make<Compositor>(that->bind<wl_compositor>(name, &wl_compositor_interface, version));
-    } else if (interface == xdg_wm_base_name) {
-        that->m_xdg_wm_base = make<XdgWmBase>(that->bind<xdg_wm_base>(name, &xdg_wm_base_interface, version));
+    if (interface == Compositor::interface_name) {
+        that->m_compositor =that->bind<Compositor>(name, version);
+    } else if (interface == XdgWmBase::interface_name) {
+        that->m_xdg_wm_base = that->bind<XdgWmBase>(name, version);
         that->m_xdg_wm_base->set_default_listener();
-    } else if (interface == fixes_name) {
-        that->m_fixes = make<Fixes>(that->bind<wl_fixes>(name, &wl_fixes_interface, min(version, 2)));
-    } else if (interface == shm_name) {
-        that->m_shm = make<Shm>(that->bind<wl_shm>(name, &wl_shm_interface, version));
+    } else if (interface == Fixes::interface_name) {
+        that->m_fixes = that->bind<Fixes>(name, min(version, 2));
+    } else if (interface == Shm::interface_name) {
+        that->m_shm = that->bind<Shm>(name, version);
     } else {
         dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }

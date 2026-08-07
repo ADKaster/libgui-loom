@@ -8,6 +8,7 @@
 
 #include <AK/Noncopyable.h>
 #include <AK/Platform.h>
+#include <Loom/Wayland/Protocol/Interface.h>
 #include <xdg-shell-client.h>
 
 namespace Loom::Wayland::Protocol {
@@ -16,6 +17,8 @@ class XdgWmBase {
     AK_MAKE_NONCOPYABLE(XdgWmBase);
     AK_MAKE_NONMOVABLE(XdgWmBase);
 public:
+    WAYLAND_INTERFACE(xdg_wm_base);
+
     explicit XdgWmBase(xdg_wm_base* wm_base);
     ~XdgWmBase();
 

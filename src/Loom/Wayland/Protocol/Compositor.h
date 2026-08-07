@@ -8,6 +8,7 @@
 
 #include <AK/Platform.h>
 #include <AK/Noncopyable.h>
+#include <Loom/Wayland/Protocol/Interface.h>
 #include <wayland-client.h>
 
 namespace Loom::Wayland::Protocol {
@@ -16,6 +17,8 @@ class Compositor {
     AK_MAKE_NONCOPYABLE(Compositor);
     AK_MAKE_NONMOVABLE(Compositor);
 public:
+    WAYLAND_INTERFACE(wl_compositor);
+
     explicit Compositor(wl_compositor* compositor);
     ~Compositor();
 
