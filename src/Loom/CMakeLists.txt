@@ -64,6 +64,8 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
         Wayland/Protocol/Registry.cpp
         Wayland/Protocol/Compositor.cpp
         Wayland/Protocol/Compositor.h
+        Wayland/Protocol/Fixes.cpp
+        Wayland/Protocol/Fixes.h
         Wayland/Protocol/Shm.cpp
         Wayland/Protocol/Shm.h
         Wayland/Protocol/XdgWmBase.cpp

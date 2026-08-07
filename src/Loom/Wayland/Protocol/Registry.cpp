@@ -5,6 +5,7 @@
  */
 
 #include <Loom/Wayland/Protocol/Compositor.h>
+#include <Loom/Wayland/Protocol/Fixes.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Shm.h>
 #include <Loom/Wayland/Protocol/XdgWmBase.h>
@@ -27,13 +28,9 @@ Registry::Registry(wl_display* display, wl_registry* registry)
 Registry::~Registry()
 {
     if (m_fixes)
-        wl_fixes_destroy_registry(m_fixes, m_registry);
+        wl_fixes_destroy_registry(m_fixes->ptr(), m_registry);
 
     wl_registry_destroy(m_registry);
-
-    if (m_fixes)
-        wl_fixes_destroy(m_fixes);
-
 }
 
 ErrorOr<NonnullOwnPtr<Registry>> Registry::try_create(wl_display* display)
@@ -75,7 +72,7 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
         that->m_xdg_wm_base = make<XdgWmBase>(that->bind<xdg_wm_base>(name, &xdg_wm_base_interface, version));
         that->m_xdg_wm_base->set_default_listener();
     } else if (interface == fixes_name) {
-        that->m_fixes = that->bind<wl_fixes>(name, &wl_fixes_interface, min(version, 2));
+        that->m_fixes = make<Fixes>(that->bind<wl_fixes>(name, &wl_fixes_interface, min(version, 2)));
     } else if (interface == shm_name) {
         that->m_shm = make<Shm>(that->bind<wl_shm>(name, &wl_shm_interface, version));
     } else {
@@ -88,8 +85,8 @@ void Registry::global_removed_callback(void* data, wl_registry* registry, u32 na
     auto* that = static_cast<Registry*>(data);
     VERIFY(that->m_registry == registry);
 
-    if (that->m_fixes && wl_fixes_get_version(that->m_fixes) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
-        wl_fixes_ack_global_remove(that->m_fixes, registry, name);
+    if (that->m_fixes && wl_fixes_get_version(that->m_fixes->ptr()) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
+        wl_fixes_ack_global_remove(that->m_fixes->ptr(), registry, name);
 }
 
 }
