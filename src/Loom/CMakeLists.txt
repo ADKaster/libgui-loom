@@ -1,4 +1,3 @@
-
 if (APPLE)
     set(LOOM_BACKEND_DEFAULT AppKit)
 else()
@@ -62,14 +61,13 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
         Wayland/ScreenLayout.cpp
         Wayland/WindowServerConnectionProxy.cpp
         Wayland/Protocol/Registry.cpp
+        Wayland/Protocol/Buffer.cpp
         Wayland/Protocol/Compositor.cpp
-        Wayland/Protocol/Compositor.h
         Wayland/Protocol/Fixes.cpp
-        Wayland/Protocol/Fixes.h
         Wayland/Protocol/Shm.cpp
-        Wayland/Protocol/Shm.h
+        Wayland/Protocol/Surface.cpp
+        Wayland/Protocol/XdgSurface.cpp
         Wayland/Protocol/XdgWmBase.cpp
-        Wayland/Protocol/XdgWmBase.h
 
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell.c
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell-client.h

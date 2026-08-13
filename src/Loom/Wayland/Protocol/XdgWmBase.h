@@ -8,10 +8,14 @@
 
 #include <AK/Noncopyable.h>
 #include <AK/Platform.h>
+#include <AK/OwnPtr.h>
 #include <Loom/Wayland/Protocol/Interface.h>
 #include <xdg-shell-client.h>
 
 namespace Loom::Wayland::Protocol {
+
+class Surface;
+class XdgSurface;
 
 class XdgWmBase {
     AK_MAKE_NONCOPYABLE(XdgWmBase);
@@ -25,6 +29,8 @@ public:
     RETURNS_NONNULL [[nodiscard]] xdg_wm_base* ptr() const { return m_wm_base; }
 
     void set_default_listener();
+
+    OwnPtr<XdgSurface> get_xdg_surface(NonnullOwnPtr<Surface> surface);
 
 private:
     xdg_wm_base* m_wm_base;
