@@ -19,10 +19,11 @@ const wl_registry_listener Registry::s_listener {
     &Registry::global_removed_callback,
 };
 
-Registry::Registry(wl_display* display, wl_registry* registry)
-    : m_display(display)
-    , m_registry(registry)
+Registry::Registry(wl_registry* registry)
+    : m_registry(registry)
 {
+    VERIFY(m_registry);
+    wl_registry_add_listener(m_registry, &s_listener, this);
 }
 
 Registry::~Registry()
@@ -31,23 +32,6 @@ Registry::~Registry()
         m_fixes->destroy_registry(*this);
 
     wl_registry_destroy(m_registry);
-}
-
-ErrorOr<NonnullOwnPtr<Registry>> Registry::try_create(wl_display* display)
-{
-    auto* wayland_registry = wl_display_get_registry(display);
-    VERIFY(wayland_registry);
-    auto registry = TRY(adopt_nonnull_own_or_enomem(new (nothrow) Registry(display, wayland_registry)));
-
-    wl_registry_add_listener(registry->m_registry, &s_listener, registry.ptr());
-
-    wl_display_roundtrip(registry->m_display);
-
-    VERIFY(registry->m_compositor);
-    VERIFY(registry->m_shm);
-    VERIFY(registry->m_xdg_wm_base);
-
-    return registry;
 }
 
 template<typename T>

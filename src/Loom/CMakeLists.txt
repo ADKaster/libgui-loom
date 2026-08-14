@@ -58,6 +58,7 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
 
     add_executable(Loom
         Wayland/main.cpp
+        Wayland/Display.cpp
         Wayland/ScreenLayout.cpp
         Wayland/WindowServerConnectionProxy.cpp
         Wayland/Protocol/Registry.cpp

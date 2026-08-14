@@ -13,6 +13,10 @@
 #include <wayland-client.h>
 #include <xdg-shell-client.h>
 
+namespace Loom::Wayland {
+class Display;
+}
+
 namespace Loom::Wayland::Protocol {
 
 class Compositor;
@@ -21,11 +25,11 @@ class Shm;
 class XdgWmBase;
 
 class Registry {
-
+    AK_MAKE_NONCOPYABLE(Registry);
+    AK_MAKE_NONMOVABLE(Registry);
 public:
+    explicit Registry(wl_registry*);
     ~Registry();
-
-    static ErrorOr<NonnullOwnPtr<Registry>> try_create(wl_display*);
 
     RETURNS_NONNULL [[nodiscard]] wl_registry* ptr() const { return m_registry; }
 
@@ -35,7 +39,6 @@ public:
     [[nodiscard]] XdgWmBase& wm_base() const { return *m_xdg_wm_base; }
 
 private:
-    Registry(wl_display*, wl_registry*);
 
     static void global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version);
     static void global_removed_callback(void* data, wl_registry* registry, u32 name);
@@ -44,7 +47,6 @@ private:
     template<typename T>
     OwnPtr<T> bind(u32 name, u32 version);
 
-    wl_display* m_display { nullptr };
     wl_registry* m_registry { nullptr };
 
     OwnPtr<Fixes> m_fixes;

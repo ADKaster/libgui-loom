@@ -7,6 +7,7 @@
 #include <LibCore/EventLoop.h>
 #include <LibCore/Timer.h>
 #include <Loom/IPCBridge.h>
+#include <Loom/Wayland/Display.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Compositor.h>
 #include <Loom/Wayland/Protocol/Surface.h>
@@ -24,34 +25,17 @@ int main(int argc, char const* argv[])
 
     auto ipc_bridge = Loom::IPCBridge::create();
 
-    auto* display = wl_display_connect(nullptr);
-    if (display)
-        dbgln("connected!");
-    else
-        dbgln("failed to connect!");
-
-    ScopeGuard disconnect = [display] {
-        wl_display_disconnect(display);
-    };
+    auto display = Display::create(StringView {});
 
     (void)argc;
     (void)argv;
-
-    auto read_notifier = MUST(Core::Notifier::try_create(wl_display_get_fd(display), Core::Notifier::Type::Read));
-    read_notifier->on_activation = [&]() {
-        wl_display_dispatch(display);
-    };
-    auto write_notifier = MUST(Core::Notifier::try_create(wl_display_get_fd(display), Core::Notifier::Type::Write));
-    write_notifier->on_activation = [&]() {
-        wl_display_flush(display);
-    };
 
     (void)Core::EventLoop::register_signal(SIGINT, [&](int) {
         dbgln("SIGINT received, exiting...");
         event_loop.quit(0);
     });
 
-    auto registry = MUST(Protocol::Registry::try_create(display));
+    auto registry = display->get_registry();
 
     auto surface = registry->compositor().create_surface();
     auto xdg_surface = registry->wm_base().get_xdg_surface(move(surface));
