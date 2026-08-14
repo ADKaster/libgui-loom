@@ -8,10 +8,13 @@
 
 #include <AK/Platform.h>
 #include <AK/Noncopyable.h>
+#include <AK/NonnullOwnPtr.h>
 #include <Loom/Wayland/Protocol/Interface.h>
 #include <wayland-client.h>
 
 namespace Loom::Wayland::Protocol {
+
+class Surface;
 
 class Compositor {
     AK_MAKE_NONCOPYABLE(Compositor);
@@ -23,6 +26,8 @@ public:
     ~Compositor();
 
     RETURNS_NONNULL [[nodiscard]] wl_compositor* ptr() const { return m_compositor; }
+
+    NonnullOwnPtr<Surface> create_surface();
 
 private:
     wl_compositor* m_compositor;

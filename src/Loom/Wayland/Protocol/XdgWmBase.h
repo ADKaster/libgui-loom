@@ -16,6 +16,7 @@ namespace Loom::Wayland::Protocol {
 
 class Surface;
 class XdgSurface;
+class XdgToplevel;
 
 class XdgWmBase {
     AK_MAKE_NONCOPYABLE(XdgWmBase);
@@ -30,7 +31,7 @@ public:
 
     void set_default_listener();
 
-    OwnPtr<XdgSurface> get_xdg_surface(NonnullOwnPtr<Surface> surface);
+    NonnullOwnPtr<XdgSurface> get_xdg_surface(NonnullOwnPtr<Surface> surface);
 
 private:
     xdg_wm_base* m_wm_base;

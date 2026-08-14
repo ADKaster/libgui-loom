@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/Function.h>
 #include <AK/Noncopyable.h>
 #include <AK/Platform.h>
 #include <Loom/Wayland/Protocol/Interface.h>
@@ -24,8 +25,23 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] wl_surface* ptr() const { return m_surface; }
 
+    Function<void(/* FIXME: Output */)> on_enter;
+    Function<void(/* FIXME: Output */)> on_leave;
+
+    i32 preferred_buffer_scale() const { return m_preferred_buffer_scale; }
+    u32 preferred_transform() const { return m_preferred_transform; }
+
+    void commit();
+
 private:
     wl_surface* m_surface;
+
+    static void surface_preferred_buffer_scale(void* data, wl_surface*, i32 scale);
+    static void surface_preferred_transform(void* data, wl_surface*, u32 transform);
+    static const wl_surface_listener s_surface_listener;
+
+    i32 m_preferred_buffer_scale { 1 };
+    u32 m_preferred_transform { WL_OUTPUT_TRANSFORM_NORMAL }; // FIXME: make own wl_output.transform enum
 };
 
 }

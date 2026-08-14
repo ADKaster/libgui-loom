@@ -30,7 +30,7 @@ void XdgWmBase::set_default_listener()
     xdg_wm_base_add_listener(m_wm_base, &s_wm_base_listener, nullptr);
 }
 
-OwnPtr<XdgSurface> XdgWmBase::get_xdg_surface(NonnullOwnPtr<Surface> surface)
+NonnullOwnPtr<XdgSurface> XdgWmBase::get_xdg_surface(NonnullOwnPtr<Surface> surface)
 {
     return make<XdgSurface>(xdg_wm_base_get_xdg_surface(m_wm_base, surface->ptr()), move(surface));
 }

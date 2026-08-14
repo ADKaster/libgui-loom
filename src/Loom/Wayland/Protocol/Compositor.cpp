@@ -6,6 +6,7 @@
 
 #include <AK/Assertions.h>
 #include <Loom/Wayland/Protocol/Compositor.h>
+#include <Loom/Wayland/Protocol/Surface.h>
 
 namespace Loom::Wayland::Protocol {
 
@@ -18,6 +19,11 @@ Compositor::Compositor(wl_compositor* compositor)
 Compositor::~Compositor()
 {
     wl_compositor_destroy(m_compositor);
+}
+
+NonnullOwnPtr<Surface> Compositor::create_surface()
+{
+    return make<Surface>(wl_compositor_create_surface(m_compositor));
 }
 
 }

@@ -67,6 +67,7 @@ elseif (LOOM_BACKEND STREQUAL "Wayland")
         Wayland/Protocol/Shm.cpp
         Wayland/Protocol/Surface.cpp
         Wayland/Protocol/XdgSurface.cpp
+        Wayland/Protocol/XdgToplevel.cpp
         Wayland/Protocol/XdgWmBase.cpp
 
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols/xdg-shell.c

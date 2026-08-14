@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/Function.h>
 #include <AK/Noncopyable.h>
 #include <AK/NonnullOwnPtr.h>
 #include <AK/Platform.h>
@@ -15,6 +16,7 @@
 namespace Loom::Wayland::Protocol {
 
 class Surface;
+class XdgToplevel;
 
 class XdgSurface {
     AK_MAKE_NONCOPYABLE(XdgSurface);
@@ -26,6 +28,12 @@ public:
     ~XdgSurface();
 
     RETURNS_NONNULL [[nodiscard]] xdg_surface* ptr() const { return m_xdg_surface; }
+
+    Surface& surface() const { return *m_surface; }
+
+    static NonnullOwnPtr<XdgToplevel> get_xdg_toplevel(NonnullOwnPtr<XdgSurface>);
+
+    Function<void()> on_configure;
 
 private:
     NonnullOwnPtr<Surface> m_surface;
