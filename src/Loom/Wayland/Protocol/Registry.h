@@ -10,6 +10,7 @@
 #include <AK/Error.h>
 #include <AK/NonnullOwnPtr.h>
 #include <AK/OwnPtr.h>
+#include <AK/Vector.h>
 #include <wayland-client.h>
 #include <xdg-shell-client.h>
 
@@ -23,6 +24,7 @@ class Compositor;
 class Fixes;
 class Shm;
 class XdgWmBase;
+class Output;
 
 class Registry {
     AK_MAKE_NONCOPYABLE(Registry);
@@ -37,6 +39,7 @@ public:
     [[nodiscard]] Shm& shm() const { return *m_shm; }
     [[nodiscard]] Fixes& fixes() const { return *m_fixes; }
     [[nodiscard]] XdgWmBase& wm_base() const { return *m_xdg_wm_base; }
+    [[nodiscard]] ReadonlySpan<NonnullOwnPtr<Output>> outputs() const { return m_outputs.span(); }
 
 private:
 
@@ -44,8 +47,8 @@ private:
     static void global_removed_callback(void* data, wl_registry* registry, u32 name);
     static const wl_registry_listener s_listener;
 
-    template<typename T>
-    OwnPtr<T> bind(u32 name, u32 version);
+    template<typename T, typename... Args>
+    OwnPtr<T> bind(u32 name, u32 version, Args&&... args);
 
     wl_registry* m_registry { nullptr };
 
@@ -54,6 +57,8 @@ private:
     OwnPtr<Compositor> m_compositor;
     OwnPtr<Shm> m_shm;
     OwnPtr<XdgWmBase> m_xdg_wm_base;
+
+    Vector<NonnullOwnPtr<Output>, 2> m_outputs;
 };
 
 }

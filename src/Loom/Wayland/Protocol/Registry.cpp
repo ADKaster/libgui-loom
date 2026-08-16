@@ -6,6 +6,7 @@
 
 #include <Loom/Wayland/Protocol/Compositor.h>
 #include <Loom/Wayland/Protocol/Fixes.h>
+#include <Loom/Wayland/Protocol/Output.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Shm.h>
 #include <Loom/Wayland/Protocol/XdgWmBase.h>
@@ -34,10 +35,10 @@ Registry::~Registry()
     wl_registry_destroy(m_registry);
 }
 
-template<typename T>
-OwnPtr<T> Registry::bind(u32 name, u32 version)
+template<typename T, typename... Args>
+OwnPtr<T> Registry::bind(u32 name, u32 version, Args&&... args)
 {
-    return make<T>(static_cast<T::InterfaceType*>(wl_registry_bind(m_registry, name, T::interface, version)));
+    return make<T>(static_cast<T::InterfaceType*>(wl_registry_bind(m_registry, name, T::interface, version)), forward<Args>(args)...);
 }
 
 void Registry::global_callback(void* data, wl_registry* registry, u32 name, const char* interface, u32 version)
@@ -54,6 +55,8 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
         that->m_fixes = that->bind<Fixes>(name, min(version, 2));
     } else if (interface == Shm::interface_name) {
         that->m_shm = that->bind<Shm>(name, version);
+    } else if (interface == Output::interface_name) {
+        that->m_outputs.append(that->bind<Output>(name, version, name).release_nonnull());
     } else {
         dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }
@@ -63,6 +66,11 @@ void Registry::global_removed_callback(void* data, wl_registry* registry, u32 na
 {
     auto* that = static_cast<Registry*>(data);
     VERIFY(that->m_registry == registry);
+
+    // FIXME: Notify someone that output is gone. Or just wait for crashes and then fix
+    if (that->m_outputs.remove_first_matching([&](auto const& o) { return o->global_name() == name; })) {
+        dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Output removed: {}", name);
+    }
 
     if (that->m_fixes && that->m_fixes->version() >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
         that->m_fixes->ack_global_remove(*that, name);
