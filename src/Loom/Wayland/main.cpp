@@ -7,9 +7,12 @@
 #include <LibCore/EventLoop.h>
 #include <LibCore/Timer.h>
 #include <Loom/IPCBridge.h>
+#include <Loom/Wayland/Protocol/Buffer.h>
 #include <Loom/Wayland/Display.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Compositor.h>
+#include <Loom/Wayland/Protocol/Shm.h>
+#include <Loom/Wayland/Protocol/ShmPool.h>
 #include <Loom/Wayland/Protocol/Surface.h>
 #include <Loom/Wayland/Protocol/XdgSurface.h>
 #include <Loom/Wayland/Protocol/XdgWmBase.h>
@@ -41,7 +44,23 @@ int main(int argc, char const* argv[])
     auto xdg_surface = registry->wm_base().get_xdg_surface(move(surface));
     auto xdg_toplevel = Protocol::XdgSurface::get_xdg_toplevel(move(xdg_surface));
 
+    auto window_size = Gfx::IntSize { 200, 200 };
+    auto buf = MUST(Core::AnonymousBuffer::create_with_size(window_size.area() * 4));
+    auto copy_of_buf = MUST(Core::AnonymousBuffer::create_from_anon_fd(MUST(Core::System::dup(buf.fd())), buf.size()));
+    auto shm_pool = registry->shm().create_pool(move(buf));
+    auto buffer = shm_pool->create_buffer(window_size, Gfx::BitmapFormat::BGRA8888);
+
+    auto bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(Gfx::BitmapFormat::BGRA8888, move(copy_of_buf), window_size, 1));
+
+    bitmap->fill(Color::Magenta);
+
     xdg_toplevel->surface().surface().commit();
+
+    xdg_toplevel->surface().on_configure = [&]() {
+        xdg_toplevel->surface().surface().attach(move(buffer), 0, 0);
+        xdg_toplevel->surface().surface().commit();
+        xdg_toplevel->surface().on_configure = nullptr;
+    };
 
    return event_loop.exec();
 }

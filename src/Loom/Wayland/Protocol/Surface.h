@@ -8,11 +8,14 @@
 
 #include <AK/Function.h>
 #include <AK/Noncopyable.h>
+#include <AK/OwnPtr.h>
 #include <AK/Platform.h>
 #include <Loom/Wayland/Protocol/Interface.h>
 #include <wayland-client.h>
 
 namespace Loom::Wayland::Protocol {
+
+class Buffer;
 
 class Surface {
     AK_MAKE_NONCOPYABLE(Surface);
@@ -31,10 +34,12 @@ public:
     i32 preferred_buffer_scale() const { return m_preferred_buffer_scale; }
     u32 preferred_transform() const { return m_preferred_transform; }
 
+    void attach(OwnPtr<Buffer> buffer, i32 x, i32 y);
     void commit();
 
 private:
     wl_surface* m_surface;
+    OwnPtr<Buffer> m_pending_buffer;
 
     static void surface_preferred_buffer_scale(void* data, wl_surface*, i32 scale);
     static void surface_preferred_transform(void* data, wl_surface*, u32 transform);

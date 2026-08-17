@@ -6,6 +6,7 @@
 
 #include <AK/Assertions.h>
 #include <AK/Format.h>
+#include <Loom/Wayland/Protocol/Buffer.h>
 #include <Loom/Wayland/Protocol/Surface.h>
 
 #define SURFACE_DEBUG 1
@@ -65,6 +66,12 @@ Surface::Surface(wl_surface* surface)
 Surface::~Surface()
 {
     wl_surface_destroy(m_surface);
+}
+
+void Surface::attach(OwnPtr<Buffer> buffer, i32 x, i32 y)
+{
+    wl_surface_attach(m_surface, buffer->ptr(), x, y);
+    m_pending_buffer = move(buffer);
 }
 
 void Surface::commit()
