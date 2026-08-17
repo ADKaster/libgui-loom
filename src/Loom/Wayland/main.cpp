@@ -46,11 +46,10 @@ int main(int argc, char const* argv[])
 
     auto window_size = Gfx::IntSize { 200, 200 };
     auto buf = MUST(Core::AnonymousBuffer::create_with_size(window_size.area() * 4));
-    auto copy_of_buf = MUST(Core::AnonymousBuffer::create_from_anon_fd(MUST(Core::System::dup(buf.fd())), buf.size()));
-    auto shm_pool = registry->shm().create_pool(move(buf));
+    auto shm_pool = registry->shm().create_pool(buf);
     auto buffer = shm_pool->create_buffer(window_size, Gfx::BitmapFormat::BGRA8888);
 
-    auto bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(Gfx::BitmapFormat::BGRA8888, move(copy_of_buf), window_size, 1));
+    auto bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(Gfx::BitmapFormat::BGRA8888, move(buf), window_size, 1));
 
     bitmap->fill(Color::Magenta);
 
