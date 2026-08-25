@@ -13,7 +13,7 @@
 
 namespace Loom::Wayland::Protocol {
 
-#define WAYLAND_REGISTRY_DEBUG 0
+#define WAYLAND_REGISTRY_DEBUG 1
 
 const wl_registry_listener Registry::s_listener {
     &Registry::global_callback,

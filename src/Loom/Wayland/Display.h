@@ -14,6 +14,7 @@
 namespace Loom::Wayland {
 
 namespace Protocol {
+class Callback;
 class Registry;
 }
 
@@ -28,12 +29,16 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] wl_display* ptr() const { return m_display; }
 
-    NonnullOwnPtr<Protocol::Registry> get_registry();
+    NonnullOwnPtr<Protocol::Callback> sync();
+
+    Protocol::Registry& registry() const;
 
 private:
     explicit Display(wl_display* display, NonnullRefPtr<Core::Notifier> read_notifier, NonnullRefPtr<Core::Notifier> write_notifier);
 
     wl_display* m_display;
+
+    mutable OwnPtr<Protocol::Registry> m_registry;
 
     NonnullRefPtr<Core::Notifier> m_read_notifier;
     NonnullRefPtr<Core::Notifier> m_write_notifier;

@@ -6,6 +6,7 @@
 
 #include "WindowServerConnectionProxy.h"
 
+#include <Loom/Wayland/Window.h>
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibGfx/SystemTheme.h>
 
@@ -15,7 +16,10 @@ namespace Loom {
 
 static HashMap<int, NonnullRefPtr<WindowServerConnectionProxy>>* s_connections;
 
-struct WindowServerConnectionProxy::Impl {};
+struct WindowServerConnectionProxy::Impl {
+    Wayland::Display* display { nullptr };
+    HashMap<i32, NonnullOwnPtr<Wayland::Window>> windows;
+};
 
 WindowServerConnectionProxy::~WindowServerConnectionProxy() = default;
 
@@ -30,6 +34,11 @@ WindowServerConnectionProxy::WindowServerConnectionProxy(NonnullOwnPtr<Core::Loc
     Vector<Gfx::IntRect, 1> const screen_rects = { { 0, 0, 1024, 768 } };
     auto system_effects = Vector { true, true, true, true, true, true, true, true, true, true };
     async_fast_greet(screen_rects, 0, 1, 1, Gfx::current_system_theme_buffer(), Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query(), system_effects, client_id);
+}
+
+void WindowServerConnectionProxy::set_wayland_display(Wayland::Display& display)
+{
+    m_impl->display = &display;
 }
 
 void WindowServerConnectionProxy::die()
@@ -150,12 +159,20 @@ void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, G
     (void)title;
     (void)parent_window_id;
     (void)launch_origin_rect;
+
+    auto new_window = Wayland::Window::create(*m_impl->display);
+    m_impl->windows.set(window_id, move(new_window));
 }
 
 Messages::WindowServer::DestroyWindowResponse WindowServerConnectionProxy::destroy_window(i32 window_id)
 {
-    dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: destroy_window()");
-    (void)window_id;
+    dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: destroy_window({})", window_id);
+
+    // FIXME: Also destroy child windows
+    if (m_impl->windows.remove(window_id))
+        return Vector { window_id };
+
+    did_misbehave("DestroyWindow: Bad window ID");
     return nullptr;
 }
 

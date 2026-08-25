@@ -15,11 +15,17 @@
 
 namespace Loom {
 
+namespace Wayland {
+class Display;
+}
+
 class WindowServerConnectionProxy final
     : public IPC::ConnectionFromClient<WindowClientEndpoint, WindowServerEndpoint> {
     C_OBJECT(WindowServerConnectionProxy);
 public:
     virtual ~WindowServerConnectionProxy() override;
+
+    void set_wayland_display(Wayland::Display&);
 
 private:
     WindowServerConnectionProxy(NonnullOwnPtr<Core::LocalSocket>, int client_id);

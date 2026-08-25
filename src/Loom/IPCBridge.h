@@ -24,6 +24,8 @@ public:
 
     ~IPCBridge();
 
+    Function<void(WindowServerConnectionProxy&)> on_new_window_server_client;
+
 private:
     IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ConfigServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>>);
 

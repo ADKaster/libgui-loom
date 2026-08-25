@@ -7,8 +7,9 @@
 #include <LibCore/EventLoop.h>
 #include <LibCore/Timer.h>
 #include <Loom/IPCBridge.h>
-#include <Loom/Wayland/Protocol/Buffer.h>
 #include <Loom/Wayland/Display.h>
+#include <Loom/Wayland/Protocol/Buffer.h>
+#include <Loom/Wayland/Protocol/Callback.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Compositor.h>
 #include <Loom/Wayland/Protocol/Shm.h>
@@ -30,6 +31,10 @@ int main(int argc, char const* argv[])
 
     auto display = Display::create(StringView {});
 
+    ipc_bridge->on_new_window_server_client = [&display](auto& client) {
+        client.set_wayland_display(*display);
+    };
+
     (void)argc;
     (void)argv;
 
@@ -38,15 +43,18 @@ int main(int argc, char const* argv[])
         event_loop.quit(0);
     });
 
-    auto registry = display->get_registry();
+    auto& registry = display->registry();
 
-    auto surface = registry->compositor().create_surface();
-    auto xdg_surface = registry->wm_base().get_xdg_surface(move(surface));
+    auto sync_cb = display->sync();
+    MUST(sync_cb->promise().await());
+
+    auto surface = registry.compositor().create_surface();
+    auto xdg_surface = registry.wm_base().get_xdg_surface(move(surface));
     auto xdg_toplevel = Protocol::XdgSurface::get_xdg_toplevel(move(xdg_surface));
 
     auto window_size = Gfx::IntSize { 200, 200 };
     auto buf = MUST(Core::AnonymousBuffer::create_with_size(window_size.area() * 4));
-    auto shm_pool = registry->shm().create_pool(buf);
+    auto shm_pool = registry.shm().create_pool(buf);
     auto buffer = shm_pool->create_buffer(window_size, Gfx::BitmapFormat::BGRA8888);
 
     auto bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(Gfx::BitmapFormat::BGRA8888, move(buf), window_size, 1));

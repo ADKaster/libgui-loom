@@ -5,14 +5,15 @@
  */
 
 #include <Loom/Wayland/Display.h>
+#include <Loom/Wayland/Protocol/Callback.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 
 namespace Loom::Wayland {
 
 Display::Display(wl_display* display, NonnullRefPtr<Core::Notifier> read_notifier, NonnullRefPtr<Core::Notifier> write_notifier)
     : m_display(display)
-    , m_read_notifier(read_notifier)
-    , m_write_notifier(write_notifier)
+    , m_read_notifier(move(read_notifier))
+    , m_write_notifier(move(write_notifier))
 {
     VERIFY(m_display != nullptr);
 
@@ -53,15 +54,19 @@ NonnullOwnPtr<Display> Display::create(int fd)
     return adopt_own(*new Display(display, move(read_notifier), move(write_notifier)));
 }
 
-NonnullOwnPtr<Protocol::Registry> Display::get_registry()
+NonnullOwnPtr<Protocol::Callback> Display::sync()
 {
-    auto* wayland_registry = wl_display_get_registry(m_display);
-    VERIFY(wayland_registry);
-    auto registry = adopt_own(*new Protocol::Registry(wayland_registry));
+    auto* callback = wl_display_sync(m_display);
+    return adopt_own(*new Protocol::Callback(callback));
+}
 
-    wl_display_roundtrip(m_display);
-
-    return registry;
+Protocol::Registry& Display::registry() const
+{
+    if (!m_registry) {
+        auto* wayland_registry = wl_display_get_registry(m_display);
+        m_registry = adopt_own(*new Protocol::Registry(wayland_registry));
+    }
+    return *m_registry;
 }
 
 }
