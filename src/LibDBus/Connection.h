@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/Noncopyable.h>
+#include <LibCore/Notifier.h>
 #include <LibDBus/Forward.h>
 
 #include <dbus/dbus.h>
@@ -19,6 +20,7 @@ class Connection {
 public:
 
     static Connection& the();
+    void install_event_loop_hooks();
 
     [[nodiscard]] DBusConnection* ptr() { return m_connection; }
 

@@ -33,7 +33,4 @@ private:
     DBusError m_error;
 };
 
-template<typename T>
-using ErrorOr = AK::ErrorOr<T, Error>;
-
 }

@@ -5,9 +5,11 @@
  */
 
 #include <LibCore/EventLoop.h>
+#include <LibCore/Notifier.h>
 #include <LibCore/Timer.h>
 #include <LibDBus/Bus.h>
 #include <LibDBus/Connection.h>
+#include <LibDBus/ObjectRegistration.h>
 #include <Loom/IPCBridge.h>
 #include <Loom/Wayland/Display.h>
 #include <Loom/Wayland/Protocol/Buffer.h>
@@ -29,11 +31,31 @@ int main(int argc, char const* argv[])
 {
     Core::EventLoop event_loop;
 
-    auto dbus_result = MUST(DBus::Bus::request_name(DBus::Connection::the(), "org.serenityos.Loom", DBus::Bus::RequestNameFlags::DoNotQueue));
+    auto& dbus_connection = DBus::Connection::the();
+    dbus_connection.install_event_loop_hooks();
+
+    auto dbus_result = MUST(DBus::Bus::request_name(dbus_connection, "org.serenityos.Loom", DBus::Bus::RequestNameFlags::DoNotQueue));
     if (dbus_result != DBus::Bus::RequestNameResult::PrimaryOwner) {
         warnln("Failed to acquire D-Bus name: {}, exiting...", to_underlying(dbus_result));
         return 1;
     }
+
+    auto dbus_message_handler = MUST(DBus::ObjectRegistration::create(dbus_connection, "/org/serenityos/Loom"));
+    dbus_message_handler->on_message = [&dbus_connection](DBusMessage* message) {
+        if (!dbus_message_is_method_call(message, "org.serenityos.Loom", "Ping"))
+            return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+        dbgln("DBUS: Got a ping! Ponging...");
+
+        auto* reply = dbus_message_new_method_return(message);
+        if (!reply)
+            return DBUS_HANDLER_RESULT_NEED_MEMORY;
+
+        (void)dbus_connection_send(dbus_connection.ptr(), reply, nullptr);
+        dbus_message_unref(reply);
+
+        return DBUS_HANDLER_RESULT_HANDLED;
+    };
 
     auto ipc_bridge = Loom::IPCBridge::create();
 

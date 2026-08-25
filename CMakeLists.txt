@@ -131,6 +131,10 @@ function(serenity_app target_name)
     # FIXME: Create lists of 'required resources' per app and copy them into the app bundle
     target_link_libraries(${target_name} PRIVATE serenity_resources)
 
+    if (TARGET loom_dbus_client)
+        target_link_libraries(${target_name} PRIVATE loom_dbus_client)
+    endif()
+
     set_target_properties(${target_name} PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER "org.SerenityOS.${target_name}"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
