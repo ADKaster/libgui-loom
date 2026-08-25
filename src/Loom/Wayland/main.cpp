@@ -6,18 +6,20 @@
 
 #include <LibCore/EventLoop.h>
 #include <LibCore/Timer.h>
+#include <LibDBus/Bus.h>
+#include <LibDBus/Connection.h>
 #include <Loom/IPCBridge.h>
 #include <Loom/Wayland/Display.h>
 #include <Loom/Wayland/Protocol/Buffer.h>
 #include <Loom/Wayland/Protocol/Callback.h>
-#include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Compositor.h>
+#include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Shm.h>
 #include <Loom/Wayland/Protocol/ShmPool.h>
 #include <Loom/Wayland/Protocol/Surface.h>
 #include <Loom/Wayland/Protocol/XdgSurface.h>
-#include <Loom/Wayland/Protocol/XdgWmBase.h>
 #include <Loom/Wayland/Protocol/XdgToplevel.h>
+#include <Loom/Wayland/Protocol/XdgWmBase.h>
 
 #include <wayland-client.h>
 
@@ -26,6 +28,12 @@ using namespace Loom::Wayland;
 int main(int argc, char const* argv[])
 {
     Core::EventLoop event_loop;
+
+    auto dbus_result = MUST(DBus::Bus::request_name(DBus::Connection::the(), "org.serenityos.Loom", DBus::Bus::RequestNameFlags::DoNotQueue));
+    if (dbus_result != DBus::Bus::RequestNameResult::PrimaryOwner) {
+        warnln("Failed to acquire D-Bus name: {}, exiting...", to_underlying(dbus_result));
+        return 1;
+    }
 
     auto ipc_bridge = Loom::IPCBridge::create();
 

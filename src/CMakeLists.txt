@@ -10,6 +10,12 @@ if (NOT LOOM_BACKEND MATCHES "AppKit|Wayland")
     message(FATAL_ERROR "Invalid LOOM_BACKEND cache value, must be AppKit or Wayland")
 endif()
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+if (LOOM_BACKEND STREQUAL "Wayland")
+    add_subdirectory(LibDBus)
+endif()
+
 add_subdirectory(resources)
 
 add_subdirectory(examples)

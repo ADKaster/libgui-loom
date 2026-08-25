@@ -7,7 +7,6 @@ target_sources(Loom PRIVATE
     ConfigServerConnectionProxy.cpp
     LaunchServerConnectionProxy.cpp
 )
-target_include_directories(Loom PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(Loom PRIVATE AK LibCore LibIPC LibGfx serenity_resources)
 
 target_sources(Loom PRIVATE
