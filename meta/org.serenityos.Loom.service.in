@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.serenityos.Loom
+Exec=@LOOM_EXE_LOCATION@/Loom
