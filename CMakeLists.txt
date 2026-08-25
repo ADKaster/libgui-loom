@@ -26,6 +26,7 @@ if(NOT COMMAND serenity_option)
     endmacro()
 endif()
 
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 include(check_for_dependencies)
 include(use_linker)
