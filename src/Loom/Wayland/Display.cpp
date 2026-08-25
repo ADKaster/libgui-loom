@@ -28,6 +28,9 @@ Display::Display(wl_display* display, NonnullRefPtr<Core::Notifier> read_notifie
 
 Display::~Display()
 {
+    m_read_notifier->set_enabled(false);
+    m_write_notifier->set_enabled(false);
+    m_registry = nullptr;
     wl_display_disconnect(m_display);
 }
 
