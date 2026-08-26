@@ -21,6 +21,7 @@ add_custom_command(
 
 add_executable(Loom
     main.cpp
+    Application.cpp
     Display.cpp
     Window.cpp
     ScreenLayout.cpp
@@ -44,7 +45,7 @@ add_executable(Loom
 target_compile_definitions(Loom PRIVATE LOOM_BACKEND_WAYLAND)
 target_include_directories(Loom SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols)
 
-target_link_libraries(Loom PRIVATE Wayland::Client LibDBus)
+target_link_libraries(Loom PRIVATE Wayland::Client LibDBus LibMain)
 
 set(LOOM_EXE_LOCATION $<TARGET_FILE_DIR:Loom>)
 set(LOOM_SERVICE_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../meta/org.serenityos.Loom.service.in)

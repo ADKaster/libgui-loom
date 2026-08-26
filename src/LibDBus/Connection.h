@@ -21,6 +21,7 @@ public:
 
     static Connection& the();
     void install_event_loop_hooks();
+    void uninstall_event_loop_hooks();
 
     [[nodiscard]] DBusConnection* ptr() { return m_connection; }
 

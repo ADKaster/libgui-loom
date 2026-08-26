@@ -4,16 +4,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <LibCore/EventLoop.h>
-#include <LibCore/Notifier.h>
-#include <LibCore/Timer.h>
-#include <LibDBus/Bus.h>
-#include <LibDBus/Connection.h>
-#include <LibDBus/ObjectRegistration.h>
-#include <Loom/IPCBridge.h>
+#include <LibMain/Main.h>
+#include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Display.h>
 #include <Loom/Wayland/Protocol/Buffer.h>
-#include <Loom/Wayland/Protocol/Callback.h>
 #include <Loom/Wayland/Protocol/Compositor.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Shm.h>
@@ -23,68 +17,20 @@
 #include <Loom/Wayland/Protocol/XdgToplevel.h>
 #include <Loom/Wayland/Protocol/XdgWmBase.h>
 
-#include <wayland-client.h>
-
 using namespace Loom::Wayland;
 
-static NonnullOwnPtr<DBus::ObjectRegistration> register_dbus_ping_handler()
-{
-    auto& dbus_connection = DBus::Connection::the();
-    dbus_connection.install_event_loop_hooks();
-
-    auto dbus_message_handler = MUST(DBus::ObjectRegistration::create(dbus_connection, "/org/serenityos/Loom"));
-    dbus_message_handler->on_message = [&dbus_connection](DBusMessage* message) {
-        if (!dbus_message_is_method_call(message, "org.serenityos.Loom", "Ping"))
-            return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-
-        dbgln("DBUS: Got a ping! Ponging...");
-
-        auto* reply = dbus_message_new_method_return(message);
-        if (!reply)
-            return DBUS_HANDLER_RESULT_NEED_MEMORY;
-
-        (void)dbus_connection_send(dbus_connection.ptr(), reply, nullptr);
-        dbus_message_unref(reply);
-
-        return DBUS_HANDLER_RESULT_HANDLED;
-    };
-
-    return dbus_message_handler;
-}
-
-int main(int argc, char const* argv[])
+ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     AK::set_rich_debug_enabled(true);
 
-    auto dbus_result = MUST(DBus::Bus::request_name(DBus::Connection::the(), "org.serenityos.Loom", DBus::Bus::RequestNameFlags::DoNotQueue));
-    if (dbus_result != DBus::Bus::RequestNameResult::PrimaryOwner) {
-        warnln("Failed to acquire D-Bus name: {}, exiting...", to_underlying(dbus_result));
-        return 1;
-    }
+    if (!Loom::Application::request_single_instance())
+        return 0;
 
-    Core::EventLoop event_loop;
+    Loom::Application app;
 
-    auto display = Display::create(StringView {});
+    TRY(app.initialize(arguments));
 
-    (void)argc;
-    (void)argv;
-
-    (void)Core::EventLoop::register_signal(SIGINT, [&](int) {
-        dbgln("SIGINT received, exiting...");
-        event_loop.quit(0);
-    });
-
-    auto& registry = display->registry();
-
-    auto sync_cb = display->sync();
-    MUST(sync_cb->promise().await());
-
-    auto ipc_bridge = Loom::IPCBridge::create();
-    ipc_bridge->on_new_window_server_client = [&display](auto& client) {
-        client.set_wayland_display(*display);
-    };
-
-    auto _ = register_dbus_ping_handler();
+    auto& registry = app.display().registry();
 
     auto surface = registry.compositor().create_surface();
     auto xdg_surface = registry.wm_base().get_xdg_surface(move(surface));
@@ -107,5 +53,5 @@ int main(int argc, char const* argv[])
         xdg_toplevel->surface().on_configure = nullptr;
     };
 
-   return event_loop.exec();
+   return app.exec();
 }

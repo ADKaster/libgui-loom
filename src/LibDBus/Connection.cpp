@@ -174,4 +174,11 @@ void Connection::install_event_loop_hooks()
     queue_connection_dispatch(m_connection, current_status, nullptr);
 }
 
+void Connection::uninstall_event_loop_hooks()
+{
+    dbus_connection_set_watch_functions(m_connection, nullptr, nullptr, nullptr, nullptr, nullptr);
+    dbus_connection_set_timeout_functions(m_connection, nullptr, nullptr, nullptr, nullptr, nullptr);
+    dbus_connection_set_dispatch_status_function(m_connection, nullptr, nullptr, nullptr);
+}
+
 }
