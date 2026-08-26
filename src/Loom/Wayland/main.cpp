@@ -27,18 +27,10 @@
 
 using namespace Loom::Wayland;
 
-int main(int argc, char const* argv[])
+static NonnullOwnPtr<DBus::ObjectRegistration> register_dbus_ping_handler()
 {
-    Core::EventLoop event_loop;
-
     auto& dbus_connection = DBus::Connection::the();
     dbus_connection.install_event_loop_hooks();
-
-    auto dbus_result = MUST(DBus::Bus::request_name(dbus_connection, "org.serenityos.Loom", DBus::Bus::RequestNameFlags::DoNotQueue));
-    if (dbus_result != DBus::Bus::RequestNameResult::PrimaryOwner) {
-        warnln("Failed to acquire D-Bus name: {}, exiting...", to_underlying(dbus_result));
-        return 1;
-    }
 
     auto dbus_message_handler = MUST(DBus::ObjectRegistration::create(dbus_connection, "/org/serenityos/Loom"));
     dbus_message_handler->on_message = [&dbus_connection](DBusMessage* message) {
@@ -57,13 +49,22 @@ int main(int argc, char const* argv[])
         return DBUS_HANDLER_RESULT_HANDLED;
     };
 
-    auto ipc_bridge = Loom::IPCBridge::create();
+    return dbus_message_handler;
+}
+
+int main(int argc, char const* argv[])
+{
+    AK::set_rich_debug_enabled(true);
+
+    auto dbus_result = MUST(DBus::Bus::request_name(DBus::Connection::the(), "org.serenityos.Loom", DBus::Bus::RequestNameFlags::DoNotQueue));
+    if (dbus_result != DBus::Bus::RequestNameResult::PrimaryOwner) {
+        warnln("Failed to acquire D-Bus name: {}, exiting...", to_underlying(dbus_result));
+        return 1;
+    }
+
+    Core::EventLoop event_loop;
 
     auto display = Display::create(StringView {});
-
-    ipc_bridge->on_new_window_server_client = [&display](auto& client) {
-        client.set_wayland_display(*display);
-    };
 
     (void)argc;
     (void)argv;
@@ -77,6 +78,13 @@ int main(int argc, char const* argv[])
 
     auto sync_cb = display->sync();
     MUST(sync_cb->promise().await());
+
+    auto ipc_bridge = Loom::IPCBridge::create();
+    ipc_bridge->on_new_window_server_client = [&display](auto& client) {
+        client.set_wayland_display(*display);
+    };
+
+    auto _ = register_dbus_ping_handler();
 
     auto surface = registry.compositor().create_surface();
     auto xdg_surface = registry.wm_base().get_xdg_surface(move(surface));
