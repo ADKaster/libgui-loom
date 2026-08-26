@@ -6,9 +6,13 @@
 
 #include <AK/Format.h>
 #include <LibCore/ArgsParser.h>
+#include <LibCore/EventLoop.h>
 #include <LibDBus/Bus.h>
 #include <LibDBus/Connection.h>
 #include <LibDBus/ObjectRegistration.h>
+#include <LibGfx/Palette.h>
+#include <LibGfx/Font/FontDatabase.h>
+#include <LibGfx/SystemTheme.h>
 #include <Loom/IPCBridge.h>
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Display.h>
@@ -16,10 +20,29 @@
 
 namespace Loom {
 
-Application::Application() = default;
+static Application* s_the = nullptr;
+
+Application::Application()
+{
+    VERIFY(!s_the);
+    s_the = this;
+}
 Application::~Application()
 {
+    s_the = nullptr;
     DBus::Connection::the().uninstall_event_loop_hooks();
+}
+
+Application& Application::the()
+{
+    VERIFY(s_the);
+    return *s_the;
+}
+
+NonnullRefPtr<Gfx::PaletteImpl> Application::palette_impl()
+{
+    VERIFY(m_palette_impl);
+    return *m_palette_impl;
 }
 
 bool Application::request_single_instance()
@@ -55,13 +78,32 @@ void Application::register_dbus_handlers()
     };
 }
 
+static NonnullRefPtr<Gfx::PaletteImpl> initialize_libgfx_globals(StringView theme_name)
+{
+    auto theme = MUST(Gfx::load_system_theme(ByteString::formatted("resource://themes/{}.ini", theme_name)));
+    Gfx::set_system_theme(theme);
+    auto palette = Gfx::PaletteImpl::create_with_anonymous_buffer(theme);
+
+    auto default_font_query = "Katica 10 400 0"sv;
+    auto fixed_width_font_query = "Csilla 10 400 0"sv;
+    auto window_title_font_query = "Katica 10 700 0"sv;
+
+    Gfx::FontDatabase::set_default_font_query(default_font_query);
+    Gfx::FontDatabase::set_fixed_width_font_query(fixed_width_font_query);
+    Gfx::FontDatabase::set_window_title_font_query(window_title_font_query);
+
+    return palette;
+}
+
 ErrorOr<void> Application::initialize(Main::Arguments arguments)
 {
     StringView display_name;
+    StringView system_theme = "Default"sv;
 
     Core::ArgsParser parser;
     parser.set_general_help("Loom compositor bridge service");
     parser.add_option(display_name, "Wayland display name", "display", 'd', "name");
+    parser.add_option(system_theme, "System theme to use", "theme", 't', "name");
 
     if (!parser.parse(arguments, Core::ArgsParser::FailureBehavior::PrintUsage))
         return Error::from_string_literal("Failed to parse arguments");
@@ -78,6 +120,9 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
     // Ensure globals are bound before we start processing events
     [[maybe_unused]] auto& registry = m_display->registry();
     auto sync_cb = m_display->sync();
+
+    m_palette_impl = initialize_libgfx_globals(system_theme);
+
     TRY(sync_cb->promise().await());
 
     m_ipc_bridge = IPCBridge::create();
