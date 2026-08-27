@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "WindowServerConnectionProxy.h"
-
-#include <Loom/Wayland/Window.h>
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibGfx/SystemTheme.h>
+#include <Loom/Wayland/Application.h>
+#include <Loom/Wayland/Window.h>
+#include <Loom/Wayland/WindowServerConnectionProxy.h>
 
 namespace Loom {
 
@@ -31,14 +31,17 @@ WindowServerConnectionProxy::WindowServerConnectionProxy(NonnullOwnPtr<Core::Loc
         s_connections = new HashMap<int, NonnullRefPtr<WindowServerConnectionProxy>>;
     s_connections->set(client_id, *this);
 
-    Vector<Gfx::IntRect, 1> const screen_rects = { { 0, 0, 1024, 768 } };
-    auto system_effects = Vector { true, true, true, true, true, true, true, true, true, true };
-    async_fast_greet(screen_rects, 0, 1, 1, Gfx::current_system_theme_buffer(), Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query(), system_effects, client_id);
-}
+    m_impl->display = &Application::the().display();
 
-void WindowServerConnectionProxy::set_wayland_display(Wayland::Display& display)
-{
-    m_impl->display = &display;
+    auto screen_layout = Application::the().screen_layout();
+    auto screen_virtual_rects = Vector<Gfx::IntRect> {};
+    screen_virtual_rects.ensure_capacity(screen_layout.screens.size());
+    for (auto const& screen : screen_layout.screens) {
+        screen_virtual_rects.append({ screen.location, { screen.resolution.width() / screen.scale_factor, screen.resolution.height() / screen.scale_factor } });
+    }
+
+    auto system_effects = Vector { true, true, true, true, true, true, true, true, true, true };
+    async_fast_greet(screen_virtual_rects, screen_layout.main_screen_index, 1, 1, Gfx::current_system_theme_buffer(), Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query(), system_effects, client_id);
 }
 
 void WindowServerConnectionProxy::die()

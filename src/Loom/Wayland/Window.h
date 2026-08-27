@@ -8,6 +8,7 @@
 
 #include <AK/Noncopyable.h>
 #include <AK/NonnullOwnPtr.h>
+#include <LibCore/AnonymousBuffer.h>
 #include <Loom/Wayland/Protocol/XdgToplevel.h>
 
 namespace Loom::Wayland {
@@ -25,6 +26,7 @@ public:
 private:
     explicit Window(NonnullOwnPtr<Protocol::XdgToplevel>);
 
+    Core::AnonymousBuffer m_frame_buffer;
     NonnullOwnPtr<Protocol::XdgToplevel> m_toplevel;
 };
 

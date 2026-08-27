@@ -25,8 +25,6 @@ class WindowServerConnectionProxy final
 public:
     virtual ~WindowServerConnectionProxy() override;
 
-    void set_wayland_display(Wayland::Display&);
-
 private:
     WindowServerConnectionProxy(NonnullOwnPtr<Core::LocalSocket>, int client_id);
 

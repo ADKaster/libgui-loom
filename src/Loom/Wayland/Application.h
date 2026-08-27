@@ -17,6 +17,10 @@ namespace DBus {
 class ObjectRegistration;
 }
 
+namespace WindowServer {
+class ScreenLayout;
+}
+
 namespace Loom {
 
 namespace Wayland {
@@ -39,6 +43,7 @@ public:
 
     [[nodiscard]] Wayland::Display& display() { return *m_display; }
     [[nodiscard]] NonnullRefPtr<Gfx::PaletteImpl> palette_impl();
+    [[nodiscard]] WindowServer::ScreenLayout screen_layout() const;
 
 private:
     void register_dbus_handlers();

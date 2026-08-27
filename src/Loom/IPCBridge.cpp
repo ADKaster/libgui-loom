@@ -24,11 +24,6 @@ IPCBridge::IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>
             client.notify_about_clipboard_change();
         });
     };
-
-    m_window_server->on_new_client = [this](auto& client) {
-        if (on_new_window_server_client)
-            on_new_window_server_client(client);
-    };
 }
 
 IPCBridge::~IPCBridge() = default;

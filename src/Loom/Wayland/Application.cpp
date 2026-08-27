@@ -17,6 +17,9 @@
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Display.h>
 #include <Loom/Wayland/Protocol/Callback.h>
+#include <Loom/Wayland/Protocol/Output.h>
+#include <Loom/Wayland/Protocol/Registry.h>
+#include <Services/WindowServer/ScreenLayout.h>
 
 namespace Loom {
 
@@ -43,6 +46,56 @@ NonnullRefPtr<Gfx::PaletteImpl> Application::palette_impl()
 {
     VERIFY(m_palette_impl);
     return *m_palette_impl;
+}
+
+WindowServer::ScreenLayout Application::screen_layout() const
+{
+    WindowServer::ScreenLayout screen_layout;
+
+    auto& registry = m_display->registry();
+    auto const outputs = registry.outputs();
+    screen_layout.screens.ensure_capacity(outputs.size());
+
+    for (auto const& output : outputs) {
+        auto const& geometry = output->geometry();
+        auto const& mode = output->current_mode();
+
+        auto width = mode.width;
+        auto height = mode.height;
+        switch (geometry.transform) {
+        case Wayland::Protocol::Output::Transform::Degrees90:
+        case Wayland::Protocol::Output::Transform::Degrees270:
+        case Wayland::Protocol::Output::Transform::FlippedDegrees90:
+        case Wayland::Protocol::Output::Transform::FlippedDegrees270:
+            AK::swap(width, height);
+            break;
+        default:
+            break;
+        }
+
+        screen_layout.screens.append(WindowServer::ScreenLayout::Screen {
+            .mode = WindowServer::ScreenLayout::Screen::Mode::Virtual,
+            .device = {},
+            .location = { geometry.x, geometry.y },
+            .resolution = { width, height },
+            .scale_factor = output->scale(),
+        });
+    }
+
+    if (screen_layout.screens.is_empty()) {
+        screen_layout.screens.append(WindowServer::ScreenLayout::Screen {
+            .mode = WindowServer::ScreenLayout::Screen::Mode::Virtual,
+            .device = {},
+            .location = { 0, 0 },
+            .resolution = { 1024, 768 },
+            .scale_factor = 1,
+        });
+    }
+
+    screen_layout.main_screen_index = 0;
+    (void)screen_layout.normalize();
+    VERIFY(screen_layout.is_valid());
+    return screen_layout;
 }
 
 bool Application::request_single_instance()
@@ -126,9 +179,6 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
     TRY(sync_cb->promise().await());
 
     m_ipc_bridge = IPCBridge::create();
-    m_ipc_bridge->on_new_window_server_client = [this](auto& client) {
-        client.set_wayland_display(*m_display);
-    };
 
     register_dbus_handlers();
 
