@@ -50,6 +50,9 @@ def run_in_isolated_session(
     except subprocess.TimeoutExpired:
         print(f"Command timed out after {timeout}s.", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("Command interrupted by user.", file=sys.stderr)
+        return 1
     return completed.returncode
 
 
