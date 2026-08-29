@@ -7,28 +7,31 @@
 #include <AK/Assertions.h>
 #include <AK/Format.h>
 #include <Loom/Wayland/Protocol/Buffer.h>
+#include <Loom/Wayland/Protocol/Output.h>
 #include <Loom/Wayland/Protocol/Surface.h>
 
 #define SURFACE_DEBUG 1
 
 namespace Loom::Wayland::Protocol {
 
-static void surface_enter(void* data, wl_surface* surface, wl_output*)
+static void surface_enter(void* data, wl_surface* surface, wl_output* output)
 {
     auto& self = *static_cast<Surface*>(data);
     VERIFY(self.ptr() == surface);
-    dbgln_if(SURFACE_DEBUG, "Surface::surface_enter");
+    auto& out = *static_cast<Output*>(wl_output_get_user_data(output));
+    dbgln_if(SURFACE_DEBUG, "Surface::surface_enter({})", out.name());
     if (self.on_enter)
-        self.on_enter(/* FIXME: Output */);
+        self.on_enter(out);
 }
 
-static void surface_leave(void* data, wl_surface* surface, wl_output*)
+static void surface_leave(void* data, wl_surface* surface, wl_output* output)
 {
     auto& self = *static_cast<Surface*>(data);
     VERIFY(self.ptr() == surface);
-    dbgln_if(SURFACE_DEBUG, "Surface::surface_leave");
+    auto& out = *static_cast<Output*>(wl_output_get_user_data(output));
+    dbgln_if(SURFACE_DEBUG, "Surface::surface_leave({})", out.name());
     if (self.on_leave)
-        self.on_leave(/* FIXME: Output */);
+        self.on_leave(out);
 }
 
 void Surface::surface_preferred_buffer_scale(void* data, wl_surface* surface, i32 scale)
@@ -61,10 +64,12 @@ Surface::Surface(wl_surface* surface)
 {
     VERIFY(m_surface != nullptr);
     wl_surface_add_listener(m_surface, &s_surface_listener, this);
+    wl_surface_set_user_data(m_surface, this);
 }
 
 Surface::~Surface()
 {
+    wl_surface_set_user_data(m_surface, nullptr);
     wl_surface_destroy(m_surface);
 }
 

@@ -16,6 +16,7 @@
 namespace Loom::Wayland::Protocol {
 
 class Buffer;
+class Output;
 
 class Surface {
     AK_MAKE_NONCOPYABLE(Surface);
@@ -28,8 +29,8 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] wl_surface* ptr() const { return m_surface; }
 
-    Function<void(/* FIXME: Output */)> on_enter;
-    Function<void(/* FIXME: Output */)> on_leave;
+    Function<void(Output&)> on_enter;
+    Function<void(Output&)> on_leave;
 
     i32 preferred_buffer_scale() const { return m_preferred_buffer_scale; }
     u32 preferred_transform() const { return m_preferred_transform; }

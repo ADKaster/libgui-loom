@@ -88,10 +88,12 @@ Output::Output(wl_output* output, u32 global_name)
 {
     VERIFY(m_output != nullptr);
     wl_output_add_listener(m_output, &s_output_listener, this);
+    wl_output_set_user_data(m_output, this);
 }
 
 Output::~Output()
 {
+    wl_output_set_user_data(m_output, nullptr);
     wl_output_destroy(m_output);
 }
 
