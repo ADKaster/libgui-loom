@@ -267,6 +267,7 @@ set(libs
     GUI
     IPC
     ImageDecoderClient
+    PDF
     Regex
     RIFF
     Syntax
@@ -283,3 +284,4 @@ add_subdirectory(src)
 
 add_serenity_subdirectory(Userland/Applications/Calculator)
 add_serenity_subdirectory(Userland/Applications/PixelPaint)
+add_serenity_subdirectory(Userland/Applications/PDFViewer)
