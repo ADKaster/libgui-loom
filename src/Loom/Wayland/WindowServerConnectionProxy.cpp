@@ -9,6 +9,8 @@
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowServerConnectionProxy.h>
+#include <WindowServer/WindowMode.h>
+#include <WindowServer/WindowType.h>
 
 namespace Loom {
 
@@ -141,28 +143,47 @@ void WindowServerConnectionProxy::flash_menubar_menu(i32 window_id, i32 menu_id)
 void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, Gfx::IntRect const& rect, bool auto_position, bool has_alpha_channel, bool minimizable, bool closeable, bool resizable, bool fullscreen, bool frameless, bool forced_shadow, float alpha_hit_threshold, Gfx::IntSize base_size, Gfx::IntSize size_increment, Gfx::IntSize minimum_size, Optional<Gfx::IntSize> const& resize_aspect_ratio, i32 type, i32 mode, ByteString const& title, i32 parent_window_id, Gfx::IntRect const& launch_origin_rect)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: create_window(window_id={}, process_id={}, rect={}, auto_position={}, has_alpha_channel={}, minimizable={}, closeable={}, resizable={}, fullscreen={}, frameless={}, forced_shadow={}, alpha_hit_threshold={}, base_size={}, size_increment={}, minimum_size={}, resize_aspect_ratio={}, type={}, mode={}, title={}, parent_window_id={}, launch_origin_rect={})", window_id, process_id, rect, auto_position, has_alpha_channel, minimizable, closeable, resizable, fullscreen, frameless, forced_shadow, alpha_hit_threshold, base_size, size_increment, minimum_size, resize_aspect_ratio, type, mode, title, parent_window_id, launch_origin_rect);
-    (void)process_id;
-    (void)rect;
     (void)auto_position;
     (void)has_alpha_channel;
-    (void)minimizable;
-    (void)closeable;
-    (void)resizable;
-    (void)fullscreen;
-    (void)frameless;
     (void)forced_shadow;
     (void)alpha_hit_threshold;
     (void)base_size;
     (void)size_increment;
     (void)minimum_size;
     (void)resize_aspect_ratio;
-    (void)type;
-    (void)mode;
-    (void)title;
-    (void)parent_window_id;
     (void)launch_origin_rect;
 
-    auto new_window = Wayland::Window::create(*m_impl->display);
+    if (type < 0 || type >= to_underlying(WindowServer::WindowType::_Count)) {
+        did_misbehave("CreateWindow with a bad type");
+        return;
+    }
+    auto window_type = static_cast<WindowServer::WindowType>(type);
+
+    if (mode < 0 || mode >= to_underlying(WindowServer::WindowMode::_Count)) {
+        did_misbehave("CreateWindow with a bad mode");
+        return;
+    }
+    auto window_mode = static_cast<WindowServer::WindowMode>(mode);
+
+    Wayland::Window* parent_window = nullptr;
+    if (parent_window_id) {
+        auto it = m_impl->windows.find(parent_window_id);
+        if (it == m_impl->windows.end()) {
+            did_misbehave("CreateWindow with bad parent_window_id");
+            return;
+        }
+        parent_window = it->value.ptr();
+    }
+
+    auto new_window = Wayland::Window::create(*m_impl->display, window_type, window_mode, window_id, process_id, minimizable, closeable, frameless, resizable, fullscreen, parent_window);
+
+    // NOTE: Wayland clients are forbidden from knowing their logical x/y coordinates
+    auto content_rect = rect;
+    content_rect.set_location({0, 0});
+
+    new_window->set_title(title);
+    new_window->set_content_rect(content_rect);
+
     m_impl->windows.set(window_id, move(new_window));
 }
 
@@ -181,14 +202,19 @@ Messages::WindowServer::DestroyWindowResponse WindowServerConnectionProxy::destr
 void WindowServerConnectionProxy::set_window_title(i32 window_id, ByteString const& title)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_title(window_id={}, title={})", window_id, title);
-    (void)window_id;
-    (void)title;
+    if (auto window = m_impl->windows.get(window_id); window.has_value())
+        (*window)->set_title(title);
+    else
+        did_misbehave("SetWindowTitle: Bad window ID");
 }
 
 Messages::WindowServer::GetWindowTitleResponse WindowServerConnectionProxy::get_window_title(i32 window_id)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: get_window_title(window_id={})", window_id);
-    (void)window_id;
+    if (auto window = m_impl->windows.get(window_id); window.has_value())
+        return (*window)->title();
+
+    did_misbehave("GetWindowTitle: Bad window ID");
     return nullptr;
 }
 
@@ -230,15 +256,23 @@ void WindowServerConnectionProxy::start_window_resize(i32 window_id, i32 resize_
 Messages::WindowServer::SetWindowRectResponse WindowServerConnectionProxy::set_window_rect(i32 window_id, Gfx::IntRect const& rect)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_rect(window_id={}, rect={})", window_id, rect);
-    (void)window_id;
-    (void)rect;
+    if (auto window = m_impl->windows.get(window_id); window.has_value()) {
+        // FIXME: Validate user rect dims
+        (*window)->set_content_rect(rect);
+        return (*window)->content_rect();
+    }
+
+    did_misbehave("SetWindowRect: Bad window ID");
     return nullptr;
 }
 
 Messages::WindowServer::GetWindowRectResponse WindowServerConnectionProxy::get_window_rect(i32 window_id)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: get_window_rect(window_id={})", window_id);
-    (void)window_id;
+    if (auto window = m_impl->windows.get(window_id); window.has_value())
+        return (*window)->content_rect();
+
+    did_misbehave("GetWindowRect: Bad window ID");
     return nullptr;
 }
 
@@ -771,6 +805,9 @@ void WindowServerConnectionProxy::set_always_on_top(i32 window_id, bool always_o
 Messages::WindowServer::GetColorUnderCursorResponse WindowServerConnectionProxy::get_color_under_cursor()
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: get_color_under_cursor()");
+
+    // FIXME: D-Bus call to org.freedesktop.portal.Screenshot with method PickColor
+
     return nullptr;
 }
 

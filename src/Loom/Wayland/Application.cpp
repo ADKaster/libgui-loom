@@ -192,4 +192,9 @@ int Application::exec()
     return m_event_loop->exec();
 }
 
+StringView Application::app_id() const
+{
+    return "org.serenityos.Loom"sv;
+}
+
 }

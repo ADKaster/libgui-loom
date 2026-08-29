@@ -35,6 +35,9 @@ public:
     Function<void(i32, i32)> on_configure_bounds;
     Function<void(Span<u32>)> on_wm_capabilities;
 
+    void set_title(ByteString const&);
+    void set_app_id(ByteString const&);
+
 private:
     NonnullOwnPtr<XdgSurface> m_xdg_surface;
     xdg_toplevel* m_xdg_toplevel;

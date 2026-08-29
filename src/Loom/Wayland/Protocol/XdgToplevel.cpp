@@ -5,6 +5,7 @@
  */
 
 #include <AK/Assertions.h>
+#include <AK/ByteString.h>
 #include <AK/Vector.h>
 #include <Loom/Wayland/Protocol/XdgToplevel.h>
 #include <Loom/Wayland/Protocol/XdgSurface.h>
@@ -72,6 +73,16 @@ XdgToplevel::XdgToplevel(xdg_toplevel* xdg_toplevel, NonnullOwnPtr<XdgSurface> x
 XdgToplevel::~XdgToplevel()
 {
     xdg_toplevel_destroy(m_xdg_toplevel);
+}
+
+void XdgToplevel::set_title(ByteString const& title)
+{
+    xdg_toplevel_set_title(m_xdg_toplevel, title.characters());
+}
+
+void XdgToplevel::set_app_id(ByteString const& app_id)
+{
+    xdg_toplevel_set_app_id(m_xdg_toplevel, app_id.characters());
 }
 
 }

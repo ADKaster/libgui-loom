@@ -44,6 +44,7 @@ public:
     [[nodiscard]] Wayland::Display& display() { return *m_display; }
     [[nodiscard]] NonnullRefPtr<Gfx::PaletteImpl> palette_impl();
     [[nodiscard]] WindowServer::ScreenLayout screen_layout() const;
+    [[nodiscard]] StringView app_id() const;
 
 private:
     void register_dbus_handlers();
