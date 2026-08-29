@@ -95,6 +95,9 @@ At a high level, each window is rendered into a single Loom-owned buffer that co
 └────────────────────────────────────────────────────────────────────┘
 ```
 
+This is actually how the SerenityOS WindowServer renders windows. WindowServer blits each bitmap onto a double-buffered
+'screen buffer' that is rendered directly to a frame buffer.
+
 For the Wayland port, that means:
 - allocate a shm-backed `wl_buffer` sized to the full frame rect
 - paint the frame decorations into the buffer first
