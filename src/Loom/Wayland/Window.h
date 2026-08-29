@@ -10,6 +10,7 @@
 #include <AK/NonnullOwnPtr.h>
 #include <LibCore/AnonymousBuffer.h>
 #include <LibGfx/Rect.h>
+#include <Loom/WindowServerConnectionProxy.h>
 #include <Loom/Wayland/Protocol/XdgToplevel.h>
 #include <WindowServer/WindowMode.h>
 #include <WindowServer/WindowType.h>
@@ -26,7 +27,7 @@ class Window {
     AK_MAKE_NONCOPYABLE(Window);
     AK_MAKE_NONMOVABLE(Window);
 public:
-    static NonnullOwnPtr<Window> create(Display&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, bool minimizable, bool closeable, bool frameless, bool resizable, bool fullscreen, Window* parent_window);
+    static NonnullOwnPtr<Window> create(WindowServerConnectionProxy&, Display&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, bool minimizable, bool closeable, bool frameless, bool resizable, bool fullscreen, Window* parent_window);
 
     ~Window();
 
@@ -47,13 +48,16 @@ public:
 
     [[nodiscard]] StringView title() const { return m_title; }
     [[nodiscard]] Gfx::IntRect content_rect() const { return m_content_rect; }
+    [[nodiscard]] WindowServerConnectionProxy& client() const { return m_client; }
 
 private:
     struct WindowFlags;
 
-    explicit Window(NonnullOwnPtr<Protocol::XdgToplevel>, Protocol::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
+    explicit Window(WindowServerConnectionProxy&, NonnullOwnPtr<Protocol::XdgToplevel>, Protocol::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
 
     Core::AnonymousBuffer m_content_buffer;
+
+    WindowServerConnectionProxy& m_client;
     NonnullOwnPtr<Protocol::XdgToplevel> m_toplevel;
     Protocol::Shm& m_shm;
 

@@ -175,7 +175,7 @@ void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, G
         parent_window = it->value.ptr();
     }
 
-    auto new_window = Wayland::Window::create(*m_impl->display, window_type, window_mode, window_id, process_id, minimizable, closeable, frameless, resizable, fullscreen, parent_window);
+    auto new_window = Wayland::Window::create(*this, *m_impl->display, window_type, window_mode, window_id, process_id, minimizable, closeable, frameless, resizable, fullscreen, parent_window);
 
     // NOTE: Wayland clients are forbidden from knowing their logical x/y coordinates
     auto content_rect = rect;

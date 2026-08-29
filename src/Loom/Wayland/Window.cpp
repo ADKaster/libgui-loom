@@ -25,8 +25,9 @@
 
 namespace Loom::Wayland {
 
-Window::Window(NonnullOwnPtr<Protocol::XdgToplevel> toplevel, Protocol::Shm& shm, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
-    : m_toplevel(move(toplevel))
+Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Protocol::XdgToplevel> toplevel, Protocol::Shm& shm, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
+    : m_client(client)
+    , m_toplevel(move(toplevel))
     , m_shm(shm)
     , m_type(type)
     , m_mode(mode)
@@ -34,11 +35,14 @@ Window::Window(NonnullOwnPtr<Protocol::XdgToplevel> toplevel, Protocol::Shm& shm
     , m_process_id(process_id)
     , m_flags(flags)
 {
+    m_toplevel->on_close = [this] {
+        m_client.async_window_close_request(m_window_id);
+    };
 }
 
 Window::~Window() = default;
 
-NonnullOwnPtr<Window> Window::create(Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, bool minimizable, bool closeable, bool frameless, bool resizable, bool fullscreen, Window* parent_window)
+NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, bool minimizable, bool closeable, bool frameless, bool resizable, bool fullscreen, Window* parent_window)
 {
     auto& registry = display.registry();
     auto& shm = registry.shm();
@@ -59,7 +63,7 @@ NonnullOwnPtr<Window> Window::create(Display& display, WindowServer::WindowType 
 
     (void)parent_window;
 
-    return adopt_own(*new Window(move(xdg_toplevel), shm, window_type, window_mode, window_id, process_id, flags));
+    return adopt_own(*new Window(client, move(xdg_toplevel), shm, window_type, window_mode, window_id, process_id, flags));
 }
 
 void Window::set_title(ByteString const& title)
