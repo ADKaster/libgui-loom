@@ -11,6 +11,7 @@
 #include <LibIPC/MultiServer.h>
 #include <Loom/ClipboardConnectionProxy.h>
 #include <Loom/ConfigServerConnectionProxy.h>
+#include <Loom/FileSystemAccessServerConnectionProxy.h>
 #include <Loom/LaunchServerConnectionProxy.h>
 #include <Loom/WindowServerConnectionProxy.h>
 
@@ -25,12 +26,13 @@ public:
     ~IPCBridge();
 
 private:
-    IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ConfigServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>>);
+    IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<ConfigServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>>, NonnullOwnPtr<IPC::MultiServer<FileSystemAccessServerConnectionProxy>>);
 
     NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> m_window_server;
     NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> m_clipboard_server;
     NonnullOwnPtr<IPC::MultiServer<ConfigServerConnectionProxy>> m_config_server;
     NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>> m_launch_server;
+    NonnullOwnPtr<IPC::MultiServer<FileSystemAccessServerConnectionProxy>> m_file_system_access_server;
 };
 
 }

@@ -5,6 +5,7 @@ target_sources(Loom PRIVATE
     IPCBridge.cpp
     ClipboardConnectionProxy.cpp
     ConfigServerConnectionProxy.cpp
+    FileSystemAccessServerConnectionProxy.cpp
     LaunchServerConnectionProxy.cpp
 )
 target_link_libraries(Loom PRIVATE AK LibCore LibIPC LibGfx serenity_resources)

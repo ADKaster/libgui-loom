@@ -12,11 +12,12 @@
 namespace Loom
 {
 
-IPCBridge::IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> clipboard_server, NonnullOwnPtr<IPC::MultiServer<ConfigServerConnectionProxy>> config_server, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>> launch_server)
+IPCBridge::IPCBridge(NonnullOwnPtr<IPC::MultiServer<WindowServerConnectionProxy>> window_server, NonnullOwnPtr<IPC::MultiServer<ClipboardConnectionProxy>> clipboard_server, NonnullOwnPtr<IPC::MultiServer<ConfigServerConnectionProxy>> config_server, NonnullOwnPtr<IPC::MultiServer<LaunchServerConnectionProxy>> launch_server, NonnullOwnPtr<IPC::MultiServer<FileSystemAccessServerConnectionProxy>> file_system_access_server)
     : m_window_server(move(window_server))
     , m_clipboard_server(move(clipboard_server))
     , m_config_server(move(config_server))
     , m_launch_server(move(launch_server))
+    , m_file_system_access_server(move(file_system_access_server))
 {
     Clipboard::Storage::the().on_content_change = [&] {
         // FIXME: Sync with system clipboard
@@ -83,7 +84,12 @@ NonnullOwnPtr<IPCBridge> IPCBridge::create()
     MUST(launch_server_server->take_over_fd(launch_server_socket));
     auto launch_server = MUST(IPC::MultiServer<LaunchServerConnectionProxy>::try_create(move(launch_server_server)));
 
-    return adopt_own(*new IPCBridge(move(window_server), move(clipboard_server), move(config_server), move(launch_server)));
+    auto file_system_access_server_server = MUST(Core::LocalServer::try_create());
+    auto const file_system_access_server_socket = MUST(create_ipc_socket("/tmp/session/0/portal/filesystemaccess"sv));
+    MUST(file_system_access_server_server->take_over_fd(file_system_access_server_socket));
+    auto file_system_access_server = MUST(IPC::MultiServer<FileSystemAccessServerConnectionProxy>::try_create(move(file_system_access_server_server)));
+
+    return adopt_own(*new IPCBridge(move(window_server), move(clipboard_server), move(config_server), move(launch_server), move(file_system_access_server)));
 }
 
 }
