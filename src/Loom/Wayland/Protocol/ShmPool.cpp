@@ -8,8 +8,6 @@
 #include <Loom/Wayland/Protocol/Buffer.h>
 #include <Loom/Wayland/Protocol/ShmPool.h>
 
-#include "LibGfx/Bitmap.h"
-
 namespace Loom::Wayland::Protocol {
 
 ShmPool::ShmPool(wl_shm_pool* shm, Core::AnonymousBuffer buffer)
@@ -38,10 +36,9 @@ static wl_shm_format to_shm_format(Gfx::BitmapFormat format)
     }
 }
 
-NonnullOwnPtr<Buffer> ShmPool::create_buffer(Gfx::IntSize size, Gfx::BitmapFormat format)
+NonnullOwnPtr<Buffer> ShmPool::create_buffer(Gfx::IntSize size, i32 pitch, Gfx::BitmapFormat format)
 {
-    auto const stride = static_cast<i32>(Gfx::Bitmap::minimum_pitch(size.width(), format));
-    return make<Buffer>(wl_shm_pool_create_buffer(m_shm_pool, 0, size.width(), size.height(), stride, to_shm_format(format)));
+    return make<Buffer>(wl_shm_pool_create_buffer(m_shm_pool, 0, size.width(), size.height(), pitch, to_shm_format(format)));
 }
 
 }

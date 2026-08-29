@@ -31,7 +31,7 @@ public:
 
     [[nodiscard]] size_t buffer_size() const { return m_buffer.size(); }
 
-    NonnullOwnPtr<Buffer> create_buffer(Gfx::IntSize, Gfx::BitmapFormat);
+    NonnullOwnPtr<Buffer> create_buffer(Gfx::IntSize, i32 pitch, Gfx::BitmapFormat);
 
 private:
     wl_shm_pool* m_shm_pool;

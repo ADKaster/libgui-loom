@@ -32,7 +32,7 @@ public:
 
     void set_title(ByteString const& title);
     void set_content_rect(Gfx::IntRect);
-    void set_content_buffer(Core::AnonymousBuffer const&);
+    void set_content_buffer(Core::AnonymousBuffer const&, i32 pitch, Gfx::IntSize, Gfx::BitmapFormat);
 
     [[nodiscard]] WindowServer::WindowType type() const { return m_type; }
     [[nodiscard]] WindowServer::WindowMode mode() const { return m_mode; }

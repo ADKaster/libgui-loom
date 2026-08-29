@@ -78,10 +78,13 @@ void Window::set_content_rect(Gfx::IntRect rect)
 
     m_content_rect = rect;
 
+    // FIXME: When, exactly, am I supposed to do the initial commit? and why?
+    m_toplevel->surface().surface().commit();
+
     // TODO: Do something to lay out frame
 }
 
-void Window::set_content_buffer(Core::AnonymousBuffer const& buffer)
+void Window::set_content_buffer(Core::AnonymousBuffer const& buffer, i32 pitch, Gfx::IntSize size, Gfx::BitmapFormat format)
 {
     auto buf_fd = buffer.fd();
     auto my_fd = m_content_buffer.fd();
@@ -101,7 +104,7 @@ void Window::set_content_buffer(Core::AnonymousBuffer const& buffer)
 
     // FIXME: Use window frame
     auto shm_pool = m_shm.create_pool(m_content_buffer);
-    auto shm_buffer = shm_pool->create_buffer(m_content_rect.size(), Gfx::BitmapFormat::BGRA8888);
+    auto shm_buffer = shm_pool->create_buffer(size, pitch, format);
 
     // FIXME: xdg surface set_window_geometry
     m_toplevel->surface().surface().attach(move(shm_buffer), m_content_rect.x(), m_content_rect.y());

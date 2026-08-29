@@ -307,14 +307,21 @@ Messages::WindowServer::GetAppletRectOnScreenResponse WindowServerConnectionProx
 void WindowServerConnectionProxy::invalidate_rect(i32 window_id, Vector<Gfx::IntRect> const& rects, bool ignore_occlusion)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: invalidate_rect(window_id={}, rects={}, ignore_occlusion={})", window_id, rects, ignore_occlusion);
-    (void)window_id;
-    (void)rects;
     (void)ignore_occlusion;
+    if (auto window = m_impl->windows.get(window_id); window.has_value()) {
+        // FIXME: Something something pending paint rects, like WindowServer does
+        async_paint(window_id, (*window)->content_rect().size(), rects);
+        return;
+    }
+
+    did_misbehave("InvalidateRect: Bad window ID");
 }
 
 void WindowServerConnectionProxy::did_finish_painting(i32 window_id, Vector<Gfx::IntRect> const& rects)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: did_finish_painting(window_id={}, rects={})", window_id, rects);
+
+    // FIXME: Clear pending paint rects, presumably
     (void)window_id;
     (void)rects;
 }
@@ -328,15 +335,32 @@ void WindowServerConnectionProxy::set_global_mouse_tracking(bool enabled)
 void WindowServerConnectionProxy::set_window_backing_store(i32 window_id, i32 bpp, i32 pitch, IPC::File const& anon_file, i32 serial, bool has_alpha_channel, Gfx::IntSize size, Gfx::IntSize visible_size, bool flush_immediately)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_backing_store(window_id={}, bpp={}, pitch={}, serial={}, has_alpha_channel={}, size={}, visible_size={}, flush_immediately={})", window_id, bpp, pitch, serial, has_alpha_channel, size, visible_size, flush_immediately);
-    (void)window_id;
-    (void)bpp;
-    (void)pitch;
-    (void)anon_file;
     (void)serial;
-    (void)has_alpha_channel;
-    (void)size;
     (void)visible_size;
     (void)flush_immediately;
+
+    auto maybe_window = m_impl->windows.get(window_id);
+    if (!maybe_window.has_value()) {
+        did_misbehave("SetWindowBackingStore: Bad window ID");
+        return;
+    }
+    Wayland::Window& window = **maybe_window;
+
+    if (bpp != 32) {
+        did_misbehave("SetWindowBackingStore: Unsupported bpp");
+        return;
+    }
+
+    // FIXME: Use serial to manage double buffering of client data
+    // FIXME: Or, at least, figure out if its necessary when Wayland compositor will double buffer itself
+
+    auto buffer_or_error = Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), pitch * size.height());
+    if (buffer_or_error.is_error()) {
+        did_misbehave("SetWindowBackingStore: Failed to create anonymous buffer");
+        return;
+    }
+
+    window.set_content_buffer(buffer_or_error.release_value(), pitch, size, has_alpha_channel ? Gfx::BitmapFormat::BGRA8888 : Gfx::BitmapFormat::BGRx8888);
 }
 
 void WindowServerConnectionProxy::set_window_has_alpha_channel(i32 window_id, bool has_alpha_channel)
