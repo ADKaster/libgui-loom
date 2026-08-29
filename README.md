@@ -17,8 +17,8 @@ Set `$SERENITY_SOURCE_DIR` to your serenity checkout
 
 `cmake -GNinja -B build` and we're off.
 
-On non-macOS, the development pacakge for libdbus-1 is required on top of Serenity dependencies. The Wayland development
-packages can be handled automatically via FetchContent, or provided by your system package manager.
+On non-macOS, the development packages for libdbus-1 and libxkbcommon are required on top of Serenity dependencies.
+The Wayland development packages can be handled automatically via FetchContent, or provided by your system package manager.
 
 # Architecture
 

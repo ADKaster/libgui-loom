@@ -22,6 +22,7 @@ namespace Loom::Wayland::Protocol {
 
 class Compositor;
 class Fixes;
+class Seat;
 class Shm;
 class XdgWmBase;
 class Output;
@@ -36,6 +37,7 @@ public:
     RETURNS_NONNULL [[nodiscard]] wl_registry* ptr() const { return m_registry; }
 
     [[nodiscard]] Compositor& compositor() const { return *m_compositor; }
+    [[nodiscard]] Seat& seat() const { return *m_seat; }
     [[nodiscard]] Shm& shm() const { return *m_shm; }
     [[nodiscard]] Fixes& fixes() const { return *m_fixes; }
     [[nodiscard]] XdgWmBase& wm_base() const { return *m_xdg_wm_base; }
@@ -55,6 +57,7 @@ private:
     OwnPtr<Fixes> m_fixes;
 
     OwnPtr<Compositor> m_compositor;
+    OwnPtr<Seat> m_seat;
     OwnPtr<Shm> m_shm;
     OwnPtr<XdgWmBase> m_xdg_wm_base;
 

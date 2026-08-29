@@ -8,6 +8,7 @@
 #include <Loom/Wayland/Protocol/Fixes.h>
 #include <Loom/Wayland/Protocol/Output.h>
 #include <Loom/Wayland/Protocol/Registry.h>
+#include <Loom/Wayland/Protocol/Seat.h>
 #include <Loom/Wayland/Protocol/Shm.h>
 #include <Loom/Wayland/Protocol/XdgWmBase.h>
 
@@ -53,6 +54,8 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
         that->m_xdg_wm_base->set_default_listener();
     } else if (interface == Fixes::interface_name) {
         that->m_fixes = that->bind<Fixes>(name, min(version, 2));
+    } else if (interface == Seat::interface_name) {
+        that->m_seat = that->bind<Seat>(name, version);
     } else if (interface == Shm::interface_name) {
         that->m_shm = that->bind<Shm>(name, version);
     } else if (interface == Output::interface_name) {
