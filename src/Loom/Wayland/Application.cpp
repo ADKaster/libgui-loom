@@ -16,10 +16,13 @@
 #include <Loom/IPCBridge.h>
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Display.h>
+#include <Loom/Wayland/WindowFrame.h>
 #include <Loom/Wayland/Protocol/Callback.h>
 #include <Loom/Wayland/Protocol/Output.h>
 #include <Loom/Wayland/Protocol/Registry.h>
 #include <Services/WindowServer/ScreenLayout.h>
+#include <Services/WindowServer/SystemEffects.h>
+
 
 namespace Loom {
 
@@ -40,12 +43,6 @@ Application& Application::the()
 {
     VERIFY(s_the);
     return *s_the;
-}
-
-NonnullRefPtr<Gfx::PaletteImpl> Application::palette_impl()
-{
-    VERIFY(m_palette_impl);
-    return *m_palette_impl;
 }
 
 WindowServer::ScreenLayout Application::screen_layout() const
@@ -131,6 +128,16 @@ void Application::register_dbus_handlers()
     };
 }
 
+WindowServer::SystemEffects& Application::system_effects() const
+{
+    static WindowServer::SystemEffects effects {
+        Vector { true, true, true, true, true, true, true, true, true, true },
+        WindowServer::ShowGeometry::Never,
+        WindowServer::TileWindow::Never
+    };
+    return effects;
+}
+
 static NonnullRefPtr<Gfx::PaletteImpl> initialize_libgfx_globals(StringView theme_name)
 {
     auto theme = MUST(Gfx::load_system_theme(ByteString::formatted("resource://themes/{}.ini", theme_name)));
@@ -175,6 +182,7 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
     auto sync_cb = m_display->sync();
 
     m_palette_impl = initialize_libgfx_globals(system_theme);
+    Wayland::WindowFrame::load_theme_config();
 
     TRY(sync_cb->promise().await());
 

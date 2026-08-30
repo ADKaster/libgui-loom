@@ -42,7 +42,7 @@ Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Protocol::XdgT
 
 Window::~Window() = default;
 
-NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, bool minimizable, bool closeable, bool frameless, bool resizable, bool fullscreen, Window* parent_window)
+NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, WindowFlags flags, Window* parent_window)
 {
     auto& registry = display.registry();
     auto& shm = registry.shm();
@@ -52,14 +52,6 @@ NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Displa
     auto xdg_toplevel = Protocol::XdgSurface::get_xdg_toplevel(move(xdg_surface));
 
     xdg_toplevel->set_app_id(Application::the().app_id());
-
-    WindowFlags flags {
-        .minimizable = minimizable,
-        .closeable = closeable,
-        .frameless = frameless,
-        .resizable = resizable,
-        .fullscreen = fullscreen
-    };
 
     (void)parent_window;
 

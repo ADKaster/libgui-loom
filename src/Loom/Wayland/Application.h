@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include <AK/OwnPtr.h>
 #include <AK/NonnullRefPtr.h>
+#include <AK/OwnPtr.h>
 #include <AK/RefPtr.h>
 #include <LibCore/Forward.h>
-#include <LibGfx/Forward.h>
+#include <LibGfx/Palette.h>
 #include <LibMain/Main.h>
 
 namespace DBus {
@@ -19,6 +19,7 @@ class ObjectRegistration;
 
 namespace WindowServer {
 class ScreenLayout;
+class SystemEffects;
 }
 
 namespace Loom {
@@ -42,9 +43,11 @@ public:
     int exec();
 
     [[nodiscard]] Wayland::Display& display() { return *m_display; }
-    [[nodiscard]] NonnullRefPtr<Gfx::PaletteImpl> palette_impl();
-    [[nodiscard]] WindowServer::ScreenLayout screen_layout() const;
     [[nodiscard]] StringView app_id() const;
+
+    [[nodiscard]] Gfx::Palette palette() const { return Palette(*m_palette_impl); }
+    [[nodiscard]] WindowServer::ScreenLayout screen_layout() const;
+    [[nodiscard]] WindowServer::SystemEffects& system_effects() const;
 
 private:
     void register_dbus_handlers();

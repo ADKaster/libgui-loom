@@ -23,8 +23,10 @@ add_custom_command(
 add_executable(Loom
     main.cpp
     Application.cpp
+    Button.cpp
     Display.cpp
     Window.cpp
+    WindowFrame.cpp
     ScreenLayout.cpp
     WindowServerConnectionProxy.cpp
     Protocol/Callback.cpp

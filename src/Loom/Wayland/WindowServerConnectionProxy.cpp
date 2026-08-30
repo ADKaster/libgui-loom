@@ -9,6 +9,8 @@
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowServerConnectionProxy.h>
+
+#include <WindowServer/SystemEffects.h>
 #include <WindowServer/WindowMode.h>
 #include <WindowServer/WindowType.h>
 
@@ -42,8 +44,7 @@ WindowServerConnectionProxy::WindowServerConnectionProxy(NonnullOwnPtr<Core::Loc
         screen_virtual_rects.append({ screen.location, { screen.resolution.width() / screen.scale_factor, screen.resolution.height() / screen.scale_factor } });
     }
 
-    auto system_effects = Vector { true, true, true, true, true, true, true, true, true, true };
-    async_fast_greet(screen_virtual_rects, screen_layout.main_screen_index, 1, 1, Gfx::current_system_theme_buffer(), Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query(), system_effects, client_id);
+    async_fast_greet(screen_virtual_rects, screen_layout.main_screen_index, 1, 1, Gfx::current_system_theme_buffer(), Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query(), Application::the().system_effects().effects(), client_id);
 }
 
 void WindowServerConnectionProxy::die()
@@ -145,7 +146,6 @@ void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, G
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: create_window(window_id={}, process_id={}, rect={}, auto_position={}, has_alpha_channel={}, minimizable={}, closeable={}, resizable={}, fullscreen={}, frameless={}, forced_shadow={}, alpha_hit_threshold={}, base_size={}, size_increment={}, minimum_size={}, resize_aspect_ratio={}, type={}, mode={}, title={}, parent_window_id={}, launch_origin_rect={})", window_id, process_id, rect, auto_position, has_alpha_channel, minimizable, closeable, resizable, fullscreen, frameless, forced_shadow, alpha_hit_threshold, base_size, size_increment, minimum_size, resize_aspect_ratio, type, mode, title, parent_window_id, launch_origin_rect);
     (void)auto_position;
     (void)has_alpha_channel;
-    (void)forced_shadow;
     (void)alpha_hit_threshold;
     (void)base_size;
     (void)size_increment;
@@ -175,7 +175,16 @@ void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, G
         parent_window = it->value.ptr();
     }
 
-    auto new_window = Wayland::Window::create(*this, *m_impl->display, window_type, window_mode, window_id, process_id, minimizable, closeable, frameless, resizable, fullscreen, parent_window);
+    Wayland::Window::WindowFlags flags {
+        .minimizable = minimizable,
+        .closeable = closeable,
+        .frameless = frameless,
+        .resizable = resizable,
+        .fullscreen = fullscreen,
+        .forced_shadow = forced_shadow
+    };
+
+    auto new_window = Wayland::Window::create(*this, *m_impl->display, window_type, window_mode, window_id, process_id, flags, parent_window);
 
     // NOTE: Wayland clients are forbidden from knowing their logical x/y coordinates
     auto content_rect = rect;

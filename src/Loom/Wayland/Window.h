@@ -27,7 +27,16 @@ class Window {
     AK_MAKE_NONCOPYABLE(Window);
     AK_MAKE_NONMOVABLE(Window);
 public:
-    static NonnullOwnPtr<Window> create(WindowServerConnectionProxy&, Display&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, bool minimizable, bool closeable, bool frameless, bool resizable, bool fullscreen, Window* parent_window);
+    struct WindowFlags {
+        bool minimizable : 1 { false };
+        bool closeable : 1 { false };
+        bool frameless : 1 { false };
+        bool resizable : 1 { false };
+        bool fullscreen : 1 { false };
+        bool forced_shadow : 1 { false };
+    };
+
+    static NonnullOwnPtr<Window> create(WindowServerConnectionProxy&, Display&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags, Window* parent_window);
 
     ~Window();
 
@@ -40,20 +49,26 @@ public:
     [[nodiscard]] i32 window_id() const { return m_window_id; }
     [[nodiscard]] i32 process_id() const { return m_process_id; }
 
-    [[nodiscard]] bool is_minimizable() const { return m_flags.minimizable; }
+    [[nodiscard]] bool is_minimizable() const { return m_type == WindowServer::WindowType::Normal && m_flags.minimizable; }
     [[nodiscard]] bool is_closeable() const { return m_flags.closeable; }
     [[nodiscard]] bool is_frameless() const { return m_flags.frameless; }
-    [[nodiscard]] bool is_resizable() const { return m_flags.resizable; }
+    [[nodiscard]] bool is_resizable() const { return m_type != WindowServer::WindowType::Popup && m_flags.resizable && !m_flags.fullscreen; }
     [[nodiscard]] bool is_fullscreen() const { return m_flags.fullscreen; }
+    [[nodiscard]] bool has_forced_shadow() const { return m_flags.forced_shadow; }
+
+    [[nodiscard]] bool is_modal() const { return m_mode != WindowServer::WindowMode::Modeless; }
+    [[nodiscard]] bool is_passive() const { return m_mode == WindowServer::WindowMode::Passive; }
+    [[nodiscard]] bool is_rendering_above() const { return m_mode == WindowServer::WindowMode::RenderAbove; }
+    [[nodiscard]] bool is_blocking() const { return m_mode == WindowServer::WindowMode::Blocking; }
+
+    [[nodiscard]] bool is_moveable() const { return m_type == WindowServer::WindowType::Normal; }
 
     [[nodiscard]] StringView title() const { return m_title; }
     [[nodiscard]] Gfx::IntRect content_rect() const { return m_content_rect; }
     [[nodiscard]] WindowServerConnectionProxy& client() const { return m_client; }
 
 private:
-    struct WindowFlags;
-
-    explicit Window(WindowServerConnectionProxy&, NonnullOwnPtr<Protocol::XdgToplevel>, Protocol::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
+    Window(WindowServerConnectionProxy&, NonnullOwnPtr<Protocol::XdgToplevel>, Protocol::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
 
     Core::AnonymousBuffer m_content_buffer;
 
@@ -66,13 +81,7 @@ private:
     i32 m_window_id { -1 };
     i32 m_process_id { -1 };
 
-    struct WindowFlags {
-        bool minimizable : 1 { false };
-        bool closeable : 1 { false };
-        bool frameless : 1 { false };
-        bool resizable : 1 { false };
-        bool fullscreen : 1 { false };
-    } m_flags;
+    WindowFlags m_flags;
 
     ByteString m_title;
     Gfx::IntRect m_content_rect;
