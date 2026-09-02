@@ -11,6 +11,7 @@
 #include <LibCore/AnonymousBuffer.h>
 #include <LibGfx/Rect.h>
 #include <Loom/WindowServerConnectionProxy.h>
+#include <Loom/Wayland/WindowFrame.h>
 #include <Loom/Wayland/Protocol/XdgToplevel.h>
 #include <WindowServer/WindowMode.h>
 #include <WindowServer/WindowType.h>
@@ -42,7 +43,7 @@ public:
 
     void set_title(ByteString const& title);
     void set_content_rect(Gfx::IntRect);
-    void set_content_buffer(Core::AnonymousBuffer const&, i32 pitch, Gfx::IntSize, Gfx::BitmapFormat);
+    void set_content(NonnullRefPtr<Gfx::Bitmap>);
 
     [[nodiscard]] WindowServer::WindowType type() const { return m_type; }
     [[nodiscard]] WindowServer::WindowMode mode() const { return m_mode; }
@@ -64,17 +65,23 @@ public:
     [[nodiscard]] bool is_moveable() const { return m_type == WindowServer::WindowType::Normal; }
 
     [[nodiscard]] StringView title() const { return m_title; }
+    [[nodiscard]] Gfx::Bitmap const& icon() const { return *m_icon; }
+    void set_icon(NonnullRefPtr<Gfx::Bitmap> icon) { m_icon = move(icon); }
+    void set_default_icon();
+
     [[nodiscard]] Gfx::IntRect content_rect() const { return m_content_rect; }
+    [[nodiscard]] RefPtr<Gfx::Bitmap> content() const { return m_content_bitmap; }
+    [[nodiscard]] Protocol::XdgSurface& xdg_surface() const { return m_toplevel->surface(); }
     [[nodiscard]] WindowServerConnectionProxy& client() const { return m_client; }
 
 private:
     Window(WindowServerConnectionProxy&, NonnullOwnPtr<Protocol::XdgToplevel>, Protocol::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
 
-    Core::AnonymousBuffer m_content_buffer;
+    RefPtr<Gfx::Bitmap> m_content_bitmap;
 
     WindowServerConnectionProxy& m_client;
+    WindowFrame m_frame;
     NonnullOwnPtr<Protocol::XdgToplevel> m_toplevel;
-    Protocol::Shm& m_shm;
 
     WindowServer::WindowType m_type { WindowServer::WindowType::Invalid };
     WindowServer::WindowMode m_mode { WindowServer::WindowMode::Modeless };
@@ -84,6 +91,7 @@ private:
     WindowFlags m_flags;
 
     ByteString m_title;
+    NonnullRefPtr<Gfx::Bitmap const> m_icon;
     Gfx::IntRect m_content_rect;
 
     // FIXME: Handle parent/child relationships

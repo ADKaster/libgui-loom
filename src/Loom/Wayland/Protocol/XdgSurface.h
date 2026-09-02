@@ -11,6 +11,7 @@
 #include <AK/NonnullOwnPtr.h>
 #include <AK/Platform.h>
 #include <Loom/Wayland/Protocol/Interface.h>
+#include <LibGfx/Rect.h>
 #include <xdg-shell-client.h>
 
 namespace Loom::Wayland::Protocol {
@@ -32,6 +33,7 @@ public:
     Surface& surface() const { return *m_surface; }
 
     static NonnullOwnPtr<XdgToplevel> get_xdg_toplevel(NonnullOwnPtr<XdgSurface>);
+    void set_window_geometry(Gfx::IntRect const& rect);
 
     Function<void()> on_configure;
 

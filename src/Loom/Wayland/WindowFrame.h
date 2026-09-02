@@ -13,6 +13,10 @@
 
 namespace Loom::Wayland {
 
+namespace Protocol {
+class Shm;
+}
+
 class Window;
 
 class WindowFrame {
@@ -20,10 +24,12 @@ class WindowFrame {
     AK_MAKE_NONMOVABLE(WindowFrame);
 public:
 
-    explicit WindowFrame(Window& window);
+    WindowFrame(Window& window, Protocol::Shm& shm);
     ~WindowFrame();
 
     static void load_theme_config();
+
+    void window_content_changed(Badge<Window>);
 
     [[nodiscard]] Window& window() const { return m_window; }
 
@@ -35,8 +41,11 @@ public:
     [[nodiscard]] Gfx::IntRect frame_rect() const;
     [[nodiscard]] Gfx::IntRect inflated_for_shadow(Gfx::IntRect const& frame_rect) const;
 
+    [[nodiscard]] Gfx::IntRect leftmost_titlebar_button_rect() const;
+
 private:
     Window& m_window;
+    Protocol::Shm& m_shm;
 
     Core::AnonymousBuffer m_render_buffer;
     RefPtr<Gfx::Bitmap> m_render_bitmap;

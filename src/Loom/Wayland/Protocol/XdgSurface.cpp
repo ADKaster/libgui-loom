@@ -45,4 +45,10 @@ NonnullOwnPtr<XdgToplevel> XdgSurface::get_xdg_toplevel(NonnullOwnPtr<XdgSurface
     return make<XdgToplevel>(xdg_surface_get_toplevel(xdg_surface->ptr()), move(xdg_surface));
 }
 
+void XdgSurface::set_window_geometry(Gfx::IntRect const& rect)
+{
+    dbgln_if(XDG_SURFACE_DEBUG, "XdgSurface::set_window_geometry: rect={}", rect);
+    xdg_surface_set_window_geometry(m_xdg_surface, rect.x(), rect.y(), rect.width(), rect.height());
+}
+
 }

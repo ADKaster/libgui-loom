@@ -8,32 +8,34 @@
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/Display.h>
-#include <Loom/Wayland/Protocol/Buffer.h>
-#include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Compositor.h>
-#include <Loom/Wayland/Protocol/Shm.h>
-#include <Loom/Wayland/Protocol/ShmPool.h>
+#include <Loom/Wayland/Protocol/Registry.h>
 #include <Loom/Wayland/Protocol/Surface.h>
 #include <Loom/Wayland/Protocol/XdgSurface.h>
-#include <Loom/Wayland/Protocol/XdgWmBase.h>
 #include <Loom/Wayland/Protocol/XdgToplevel.h>
-
-#if defined(AK_OS_LINUX)
-#    include <sys/syscall.h>
-#    include <linux/kcmp.h>
-#endif
+#include <Loom/Wayland/Protocol/XdgWmBase.h>
+#include <Loom/Wayland/WindowFrame.h>
 
 namespace Loom::Wayland {
 
+static Gfx::Bitmap const& default_window_icon()
+{
+    static RefPtr<Gfx::Bitmap const> s_icon;
+    if (!s_icon)
+        s_icon = MUST(Gfx::Bitmap::load_from_uri("resource://icons/16x16/window.png"sv));
+    return *s_icon;
+}
+
 Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Protocol::XdgToplevel> toplevel, Protocol::Shm& shm, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
     : m_client(client)
+    , m_frame(*this, shm)
     , m_toplevel(move(toplevel))
-    , m_shm(shm)
     , m_type(type)
     , m_mode(mode)
     , m_window_id(window_id)
     , m_process_id(process_id)
     , m_flags(flags)
+    , m_icon(default_window_icon())
 {
     m_toplevel->on_close = [this] {
         m_client.async_window_close_request(m_window_id);
@@ -80,31 +82,16 @@ void Window::set_content_rect(Gfx::IntRect rect)
     // TODO: Do something to lay out frame
 }
 
-void Window::set_content_buffer(Core::AnonymousBuffer const& buffer, i32 pitch, Gfx::IntSize size, Gfx::BitmapFormat format)
+void Window::set_content(NonnullRefPtr<Gfx::Bitmap> bitmap)
 {
-    auto buf_fd = buffer.fd();
-    auto my_fd = m_content_buffer.fd();
+    m_content_bitmap = move(bitmap);
 
-    if (buf_fd == my_fd)
-        return;
+    m_frame.window_content_changed({});
+}
 
-#if defined(AK_OS_LINUX)
-    auto const pid = getpid();
-    if (syscall(SYS_kcmp, pid, pid, KCMP_FILE, buf_fd, my_fd) == 0) {
-        // The two fds refer to the same underlying file description, so we don't need to do anything.
-        return;
-    }
-#endif
-
-    m_content_buffer = buffer;
-
-    // FIXME: Use window frame
-    auto shm_pool = m_shm.create_pool(m_content_buffer);
-    auto shm_buffer = shm_pool->create_buffer(size, pitch, format);
-
-    // FIXME: xdg surface set_window_geometry
-    m_toplevel->surface().surface().attach(move(shm_buffer), m_content_rect.x(), m_content_rect.y());
-    m_toplevel->surface().surface().commit();
+void Window::set_default_icon()
+{
+    m_icon = default_window_icon();
 }
 
 }

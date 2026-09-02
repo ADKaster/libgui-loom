@@ -369,7 +369,13 @@ void WindowServerConnectionProxy::set_window_backing_store(i32 window_id, i32 bp
         return;
     }
 
-    window.set_content_buffer(buffer_or_error.release_value(), pitch, size, has_alpha_channel ? Gfx::BitmapFormat::BGRA8888 : Gfx::BitmapFormat::BGRx8888);
+    auto bitmap = Gfx::Bitmap::create_with_anonymous_buffer(has_alpha_channel ? Gfx::BitmapFormat::BGRA8888 : Gfx::BitmapFormat::BGRx8888, buffer_or_error.release_value(), size, 1);
+    if (bitmap.is_error()) {
+        did_misbehave("SetWindowBackingStore: Failed to create bitmap from anonymous buffer");
+        return;
+    }
+
+    window.set_content(bitmap.release_value());
 }
 
 void WindowServerConnectionProxy::set_window_has_alpha_channel(i32 window_id, bool has_alpha_channel)
@@ -510,8 +516,19 @@ void WindowServerConnectionProxy::dismiss_menu(i32 menu_id)
 void WindowServerConnectionProxy::set_window_icon_bitmap(i32 window_id, Gfx::ShareableBitmap const& icon)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_icon_bitmap(window_id={})", window_id);
-    (void)window_id;
-    (void)icon;
+    auto it = m_impl->windows.find(window_id);
+    if (it == m_impl->windows.end()) {
+        did_misbehave("SetWindowIconBitmap: Bad window ID");
+        return;
+    }
+    auto& window = *(*it).value;
+
+    if (icon.is_valid())
+        window.set_icon(*icon.bitmap());
+    else
+        window.set_default_icon();
+
+    // FIXME: invalidate window frame titlebar
 }
 
 Messages::WindowServer::StartDragResponse WindowServerConnectionProxy::start_drag(ByteString const& text, HashMap<String, ByteBuffer> const& mime_data, Gfx::ShareableBitmap const& drag_bitmap)
