@@ -15,6 +15,7 @@
 #include <Loom/Wayland/WindowFrame.h>
 #include <LibGfx/Painter.h>
 #include <LibGfx/WindowTheme.h>
+#include <WindowServer/SystemEffects.h>
 #include <WindowServer/WindowType.h>
 #include <WindowServer/WindowMode.h>
 
@@ -165,8 +166,53 @@ Gfx::IntRect WindowFrame::frame_rect() const
 
 Gfx::IntRect WindowFrame::inflated_for_shadow(Gfx::IntRect const& frame_rect) const
 {
-    // FIXME: Actually paint the shadow
+    if (auto const* shadow = shadow_bitmap()) {
+        auto const total_shadow_size = shadow->height();
+        return frame_rect.inflated(total_shadow_size, total_shadow_size);
+    }
+
     return frame_rect;
+}
+
+Gfx::Bitmap* WindowFrame::shadow_bitmap() const
+{
+    auto const& system_effects = Application::the().system_effects();
+
+    if (m_window.is_frameless() && !m_window.has_forced_shadow())
+        return nullptr;
+
+    switch (m_window.type()) {
+    case WindowServer::WindowType::Desktop:
+        return nullptr;
+    case WindowServer::WindowType::Menu:
+        if (!system_effects.menu_shadow())
+            return nullptr;
+        return s_menu_shadow;
+    case WindowServer::WindowType::Autocomplete:
+    case WindowServer::WindowType::Tooltip:
+        if (!system_effects.tooltip_shadow())
+            return nullptr;
+        return s_tooltip_shadow;
+    case WindowServer::WindowType::Taskbar:
+        return s_taskbar_shadow;
+    case WindowServer::WindowType::AppletArea:
+    case WindowServer::WindowType::WindowSwitcher:
+        return nullptr;
+    case WindowServer::WindowType::Popup:
+        if (!system_effects.window_shadow())
+            return nullptr;
+        if (!m_window.has_forced_shadow())
+            return nullptr;
+        return s_active_window_shadow;
+    default:
+        if (!system_effects.window_shadow())
+            return nullptr;
+        // FIXME: Support shadow for themes with border radius
+        if (Application::the().palette().window_border_radius() > 0)
+            return nullptr;
+        // FIXME: handle is_active to return active or inactive shadow
+        return s_active_window_shadow;
+    }
 }
 
 Gfx::IntRect WindowFrame::leftmost_titlebar_button_rect() const
@@ -208,32 +254,33 @@ void WindowFrame::window_content_changed(Badge<Window>)
     auto frame_rect_with_shadow = inflated_for_shadow(frame_rect);
     auto window_geometry_rect = Gfx::IntRect { frame_rect.location() - frame_rect_with_shadow.location(), frame_rect.size() };
 
-    dbgln("WindowFrame::window_content_changed: frame_rect={}, with_shadow={}", frame_rect, frame_rect_with_shadow);
-    dbgln("\ttitlebar_rect:{}", titlebar_rect());
-    dbgln("\ttitlebar_icon_rect:{}", titlebar_icon_rect());
-    dbgln("\ttitlebar_text_rect:{}", titlebar_text_rect());
-    dbgln("\twindow_geometry_rect:{}", window_geometry_rect);
-    dbgln("\twindow_content_rect:{}", window_content_rect);
+    auto render_size = frame_rect_with_shadow.size();
+    auto render_pitch = render_size.width() * 4;
+    auto render_format = Gfx::BitmapFormat::BGRA8888;
 
-    auto frame_size = frame_rect_with_shadow.size();
-    auto frame_pitch = frame_size.width() * 4;
-    auto frame_format = window_content_bitmap->format();
-
-    m_render_buffer = MUST(Core::AnonymousBuffer::create_with_size(frame_pitch * frame_size.height()));
-    m_render_bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(frame_format, m_render_buffer, frame_size, 1));
-    m_render_bitmap->fill(Gfx::Color::Magenta);
+    m_render_buffer = MUST(Core::AnonymousBuffer::create_with_size(render_pitch * render_size.height()));
+    m_render_bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(render_format, m_render_buffer, render_size, 1));
 
     // FIXME: use a real paint() call
-    Gfx::Painter painter(*m_render_bitmap);
-    Gfx::IntPoint const content_origin = -frame_rect_with_shadow.location();
-    painter.blit(content_origin, *window_content_bitmap, { {}, window_content_rect.size() });
-
     auto palette = Application::the().palette();
+    Gfx::Painter painter(*m_render_bitmap);
+    Gfx::IntPoint const content_origin = -frame_rect.location();
+
+    painter.clear_rect({ {}, frame_rect_with_shadow.size() }, Color::Transparent);
+
+    if (auto* shadow = shadow_bitmap()) {
+        Gfx::IntRect const shadow_rect = { {}, frame_rect_with_shadow.size() };
+        Gfx::StylePainter::paint_simple_rect_shadow(painter, shadow_rect, *shadow);
+        auto const offset = shadow->height() / 2;
+        painter.translate(offset, offset);
+    }
     Gfx::IntRect const adjusted_content_rect = { content_origin, window_content_rect.size() };
     current_window_theme().paint_normal_frame(painter, Gfx::WindowTheme::WindowState::Active, to_theme_window_mode(m_window.mode()), adjusted_content_rect, m_window.title(), m_window.icon(), palette, leftmost_titlebar_button_rect(), 0, false);
 
+    painter.blit(content_origin, *window_content_bitmap, { {}, window_content_rect.size() });
+
     auto shm_pool = m_shm.create_pool(m_render_buffer);
-    auto shm_buffer = shm_pool->create_buffer(frame_size, frame_pitch, frame_format);
+    auto shm_buffer = shm_pool->create_buffer(render_size, render_pitch, render_format);
 
     xdg_surface.set_window_geometry(window_geometry_rect);
     xdg_surface.surface().attach(move(shm_buffer), 0, 0);

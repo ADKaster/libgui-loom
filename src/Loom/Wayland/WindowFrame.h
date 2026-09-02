@@ -44,6 +44,9 @@ public:
     [[nodiscard]] Gfx::IntRect leftmost_titlebar_button_rect() const;
 
 private:
+
+    Gfx::Bitmap* shadow_bitmap() const;
+
     Window& m_window;
     Protocol::Shm& m_shm;
 
