@@ -22,7 +22,7 @@ static HashMap<int, NonnullRefPtr<WindowServerConnectionProxy>>* s_connections;
 
 struct WindowServerConnectionProxy::Impl {
     Wayland::Display* display { nullptr };
-    HashMap<i32, NonnullOwnPtr<Wayland::Window>> windows;
+    HashMap<i32, NonnullOwnPtr<Window>> windows;
 };
 
 WindowServerConnectionProxy::~WindowServerConnectionProxy() = default;
@@ -165,7 +165,7 @@ void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, G
     }
     auto window_mode = static_cast<WindowServer::WindowMode>(mode);
 
-    Wayland::Window* parent_window = nullptr;
+    Window* parent_window = nullptr;
     if (parent_window_id) {
         auto it = m_impl->windows.find(parent_window_id);
         if (it == m_impl->windows.end()) {
@@ -175,7 +175,7 @@ void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, G
         parent_window = it->value.ptr();
     }
 
-    Wayland::Window::WindowFlags flags {
+    Window::WindowFlags flags {
         .minimizable = minimizable,
         .closeable = closeable,
         .frameless = frameless,
@@ -184,7 +184,7 @@ void WindowServerConnectionProxy::create_window(i32 window_id, i32 process_id, G
         .forced_shadow = forced_shadow
     };
 
-    auto new_window = Wayland::Window::create(*this, *m_impl->display, window_type, window_mode, window_id, process_id, flags, parent_window);
+    auto new_window = Window::create(*this, *m_impl->display, window_type, window_mode, window_id, process_id, flags, parent_window);
 
     // NOTE: Wayland clients are forbidden from knowing their logical x/y coordinates
     auto content_rect = rect;
@@ -353,7 +353,7 @@ void WindowServerConnectionProxy::set_window_backing_store(i32 window_id, i32 bp
         did_misbehave("SetWindowBackingStore: Bad window ID");
         return;
     }
-    Wayland::Window& window = **maybe_window;
+    Window& window = **maybe_window;
 
     if (bpp != 32) {
         did_misbehave("SetWindowBackingStore: Unsupported bpp");

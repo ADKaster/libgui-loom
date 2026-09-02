@@ -6,11 +6,11 @@
 
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Button.h>
-#include <Loom/Wayland/Protocol/Buffer.h>
-#include <Loom/Wayland/Protocol/Shm.h>
-#include <Loom/Wayland/Protocol/ShmPool.h>
-#include <Loom/Wayland/Protocol/Surface.h>
-#include <Loom/Wayland/Protocol/XdgSurface.h>
+#include <LibWayland/Buffer.h>
+#include <LibWayland/Shm.h>
+#include <LibWayland/ShmPool.h>
+#include <LibWayland/Surface.h>
+#include <LibWayland/XdgSurface.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowFrame.h>
 #include <LibGfx/Painter.h>
@@ -19,7 +19,7 @@
 #include <WindowServer/WindowType.h>
 #include <WindowServer/WindowMode.h>
 
-namespace Loom::Wayland {
+namespace Loom {
 
 static Button::Icon s_minimize_icon;
 static Button::Icon s_maximize_icon;
@@ -126,7 +126,7 @@ void WindowFrame::load_theme_config()
     s_tooltip_shadow = load_shadow(to_resource_path(palette.tooltip_shadow_path()));
 }
 
-WindowFrame::WindowFrame(Window& window, Protocol::Shm& shm)
+WindowFrame::WindowFrame(Window& window, Wayland::Shm& shm)
     : m_window(window)
     , m_shm(shm)
 {

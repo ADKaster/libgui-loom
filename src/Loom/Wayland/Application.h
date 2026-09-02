@@ -11,6 +11,7 @@
 #include <AK/RefPtr.h>
 #include <LibCore/Forward.h>
 #include <LibGfx/Palette.h>
+#include <LibWayland/Forward.h>
 #include <LibMain/Main.h>
 
 namespace DBus {
@@ -23,10 +24,6 @@ class SystemEffects;
 }
 
 namespace Loom {
-
-namespace Wayland {
-class Display;
-}
 
 class IPCBridge;
 

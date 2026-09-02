@@ -9,15 +9,12 @@
 #include <AK/RefPtr.h>
 #include <LibCore/EventReceiver.h>
 #include <LibIPC/ConnectionFromClient.h>
+#include <LibWayland/Forward.h>
 #include <WindowServer/ScreenLayout.h>
 #include <WindowServer/WindowClientEndpoint.h>
 #include <WindowServer/WindowServerEndpoint.h>
 
 namespace Loom {
-
-namespace Wayland {
-class Display;
-}
 
 class WindowServerConnectionProxy final
     : public IPC::ConnectionFromClient<WindowClientEndpoint, WindowServerEndpoint> {

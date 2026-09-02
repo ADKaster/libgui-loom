@@ -14,6 +14,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 if (LOOM_BACKEND STREQUAL "Wayland")
     add_subdirectory(LibDBus)
+    add_subdirectory(LibWayland)
 endif()
 
 add_subdirectory(resources)

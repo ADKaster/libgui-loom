@@ -9,8 +9,6 @@
 #include <LibMain/Main.h>
 #include <Loom/Wayland/Application.h>
 
-using namespace Loom::Wayland;
-
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     AK::set_rich_debug_enabled(true);

@@ -15,14 +15,13 @@
 #include <LibGfx/SystemTheme.h>
 #include <Loom/IPCBridge.h>
 #include <Loom/Wayland/Application.h>
-#include <Loom/Wayland/Display.h>
+#include <LibWayland/Display.h>
 #include <Loom/Wayland/WindowFrame.h>
-#include <Loom/Wayland/Protocol/Callback.h>
-#include <Loom/Wayland/Protocol/Output.h>
-#include <Loom/Wayland/Protocol/Registry.h>
+#include <LibWayland/Callback.h>
+#include <LibWayland/Output.h>
+#include <LibWayland/Registry.h>
 #include <Services/WindowServer/ScreenLayout.h>
 #include <Services/WindowServer/SystemEffects.h>
-
 
 namespace Loom {
 
@@ -60,10 +59,10 @@ WindowServer::ScreenLayout Application::screen_layout() const
         auto width = mode.width;
         auto height = mode.height;
         switch (geometry.transform) {
-        case Wayland::Protocol::Output::Transform::Degrees90:
-        case Wayland::Protocol::Output::Transform::Degrees270:
-        case Wayland::Protocol::Output::Transform::FlippedDegrees90:
-        case Wayland::Protocol::Output::Transform::FlippedDegrees270:
+        case Wayland::Output::Transform::Degrees90:
+        case Wayland::Output::Transform::Degrees270:
+        case Wayland::Output::Transform::FlippedDegrees90:
+        case Wayland::Output::Transform::FlippedDegrees270:
             AK::swap(width, height);
             break;
         default:
@@ -182,7 +181,7 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
     auto sync_cb = m_display->sync();
 
     m_palette_impl = initialize_libgfx_globals(system_theme);
-    Wayland::WindowFrame::load_theme_config();
+    WindowFrame::load_theme_config();
 
     TRY(sync_cb->promise().await());
 

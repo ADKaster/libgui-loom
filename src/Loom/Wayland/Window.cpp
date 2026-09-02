@@ -4,19 +4,18 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <AK/Platform.h>
+#include <LibWayland/Compositor.h>
+#include <LibWayland/Display.h>
+#include <LibWayland/Registry.h>
+#include <LibWayland/Surface.h>
+#include <LibWayland/XdgSurface.h>
+#include <LibWayland/XdgToplevel.h>
+#include <LibWayland/XdgWmBase.h>
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Window.h>
-#include <Loom/Wayland/Display.h>
-#include <Loom/Wayland/Protocol/Compositor.h>
-#include <Loom/Wayland/Protocol/Registry.h>
-#include <Loom/Wayland/Protocol/Surface.h>
-#include <Loom/Wayland/Protocol/XdgSurface.h>
-#include <Loom/Wayland/Protocol/XdgToplevel.h>
-#include <Loom/Wayland/Protocol/XdgWmBase.h>
 #include <Loom/Wayland/WindowFrame.h>
 
-namespace Loom::Wayland {
+namespace Loom {
 
 static Gfx::Bitmap const& default_window_icon()
 {
@@ -26,7 +25,7 @@ static Gfx::Bitmap const& default_window_icon()
     return *s_icon;
 }
 
-Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Protocol::XdgToplevel> toplevel, Protocol::Shm& shm, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
+Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgToplevel> toplevel, Wayland::Shm& shm, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
     : m_client(client)
     , m_frame(*this, shm)
     , m_toplevel(move(toplevel))
@@ -44,14 +43,14 @@ Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Protocol::XdgT
 
 Window::~Window() = default;
 
-NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, WindowFlags flags, Window* parent_window)
+NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Wayland::Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, WindowFlags flags, Window* parent_window)
 {
     auto& registry = display.registry();
     auto& shm = registry.shm();
 
     auto surface = registry.compositor().create_surface();
     auto xdg_surface = registry.wm_base().get_xdg_surface(move(surface));
-    auto xdg_toplevel = Protocol::XdgSurface::get_xdg_toplevel(move(xdg_surface));
+    auto xdg_toplevel = Wayland::XdgSurface::get_xdg_toplevel(move(xdg_surface));
 
     xdg_toplevel->set_app_id(Application::the().app_id());
 
@@ -92,6 +91,11 @@ void Window::set_content(NonnullRefPtr<Gfx::Bitmap> bitmap)
 void Window::set_default_icon()
 {
     m_icon = default_window_icon();
+}
+
+Wayland::XdgSurface& Window::xdg_surface() const
+{
+    return m_toplevel->surface();
 }
 
 }

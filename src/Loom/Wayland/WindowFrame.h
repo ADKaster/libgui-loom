@@ -10,12 +10,9 @@
 #include <LibCore/AnonymousBuffer.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Rect.h>
+#include <LibWayland/Forward.h>
 
-namespace Loom::Wayland {
-
-namespace Protocol {
-class Shm;
-}
+namespace Loom {
 
 class Window;
 
@@ -24,7 +21,7 @@ class WindowFrame {
     AK_MAKE_NONMOVABLE(WindowFrame);
 public:
 
-    WindowFrame(Window& window, Protocol::Shm& shm);
+    WindowFrame(Window& window, Wayland::Shm& shm);
     ~WindowFrame();
 
     static void load_theme_config();
@@ -48,7 +45,7 @@ private:
     Gfx::Bitmap* shadow_bitmap() const;
 
     Window& m_window;
-    Protocol::Shm& m_shm;
+    Wayland::Shm& m_shm;
 
     Core::AnonymousBuffer m_render_buffer;
     RefPtr<Gfx::Bitmap> m_render_bitmap;

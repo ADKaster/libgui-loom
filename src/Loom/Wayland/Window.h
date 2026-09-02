@@ -8,21 +8,14 @@
 
 #include <AK/Noncopyable.h>
 #include <AK/NonnullOwnPtr.h>
-#include <LibCore/AnonymousBuffer.h>
 #include <LibGfx/Rect.h>
-#include <Loom/WindowServerConnectionProxy.h>
+#include <LibWayland/Forward.h>
 #include <Loom/Wayland/WindowFrame.h>
-#include <Loom/Wayland/Protocol/XdgToplevel.h>
+#include <Loom/WindowServerConnectionProxy.h>
 #include <WindowServer/WindowMode.h>
 #include <WindowServer/WindowType.h>
 
-namespace Loom::Wayland {
-
-namespace Protocol {
-class Shm;
-}
-
-class Display;
+namespace Loom {
 
 class Window {
     AK_MAKE_NONCOPYABLE(Window);
@@ -37,7 +30,7 @@ public:
         bool forced_shadow : 1 { false };
     };
 
-    static NonnullOwnPtr<Window> create(WindowServerConnectionProxy&, Display&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags, Window* parent_window);
+    static NonnullOwnPtr<Window> create(WindowServerConnectionProxy&, Wayland::Display&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags, Window* parent_window);
 
     ~Window();
 
@@ -71,17 +64,17 @@ public:
 
     [[nodiscard]] Gfx::IntRect content_rect() const { return m_content_rect; }
     [[nodiscard]] RefPtr<Gfx::Bitmap> content() const { return m_content_bitmap; }
-    [[nodiscard]] Protocol::XdgSurface& xdg_surface() const { return m_toplevel->surface(); }
+    [[nodiscard]] Wayland::XdgSurface& xdg_surface() const;
     [[nodiscard]] WindowServerConnectionProxy& client() const { return m_client; }
 
 private:
-    Window(WindowServerConnectionProxy&, NonnullOwnPtr<Protocol::XdgToplevel>, Protocol::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
+    Window(WindowServerConnectionProxy&, NonnullOwnPtr<Wayland::XdgToplevel>, Wayland::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
 
     RefPtr<Gfx::Bitmap> m_content_bitmap;
 
     WindowServerConnectionProxy& m_client;
     WindowFrame m_frame;
-    NonnullOwnPtr<Protocol::XdgToplevel> m_toplevel;
+    NonnullOwnPtr<Wayland::XdgToplevel> m_toplevel;
 
     WindowServer::WindowType m_type { WindowServer::WindowType::Invalid };
     WindowServer::WindowMode m_mode { WindowServer::WindowMode::Modeless };
