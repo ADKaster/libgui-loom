@@ -8,6 +8,8 @@
 #include <LibWayland/Surface.h>
 #include <LibWayland/XdgSurface.h>
 #include <LibWayland/XdgToplevel.h>
+#include <LibWayland/XdgPopup.h>
+#include <LibWayland/XdgPositioner.h>
 
 #define XDG_SURFACE_DEBUG 1
 
@@ -43,6 +45,11 @@ XdgSurface::~XdgSurface()
 NonnullOwnPtr<XdgToplevel> XdgSurface::get_xdg_toplevel(NonnullOwnPtr<XdgSurface> xdg_surface)
 {
     return make<XdgToplevel>(xdg_surface_get_toplevel(xdg_surface->ptr()), move(xdg_surface));
+}
+
+NonnullOwnPtr<XdgPopup> XdgSurface::get_xdg_popup(NonnullOwnPtr<XdgSurface> xdg_surface, XdgSurface* parent, NonnullOwnPtr<XdgPositioner> positioner)
+{
+    return make<XdgPopup>(xdg_surface_get_popup(xdg_surface->ptr(), parent ? parent->ptr() : nullptr, positioner->ptr()), move(xdg_surface), parent, move(positioner));
 }
 
 void XdgSurface::set_window_geometry(Gfx::IntRect const& rect)

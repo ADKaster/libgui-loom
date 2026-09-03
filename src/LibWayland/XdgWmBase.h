@@ -26,9 +26,8 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] xdg_wm_base* ptr() const { return m_wm_base; }
 
-    void set_default_listener();
-
     NonnullOwnPtr<XdgSurface> get_xdg_surface(NonnullOwnPtr<Surface> surface);
+    NonnullOwnPtr<XdgPositioner> get_xdg_positioner();
 
 private:
     xdg_wm_base* m_wm_base;

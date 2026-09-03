@@ -31,6 +31,7 @@ public:
     Surface& surface() const { return *m_surface; }
 
     static NonnullOwnPtr<XdgToplevel> get_xdg_toplevel(NonnullOwnPtr<XdgSurface>);
+    static NonnullOwnPtr<XdgPopup> get_xdg_popup(NonnullOwnPtr<XdgSurface>, XdgSurface* parent, NonnullOwnPtr<XdgPositioner>);
     void set_window_geometry(Gfx::IntRect const& rect);
 
     Function<void()> on_configure;

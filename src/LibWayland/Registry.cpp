@@ -51,7 +51,6 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
         that->m_compositor =that->bind<Compositor>(name, version);
     } else if (interface == XdgWmBase::interface_name) {
         that->m_xdg_wm_base = that->bind<XdgWmBase>(name, version);
-        that->m_xdg_wm_base->set_default_listener();
     } else if (interface == Fixes::interface_name) {
         that->m_fixes = that->bind<Fixes>(name, min(version, 2));
     } else if (interface == Seat::interface_name) {

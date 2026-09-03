@@ -35,6 +35,8 @@ lagom_lib(LibWayland wayland
         Shm.cpp
         ShmPool.cpp
         Surface.cpp
+        XdgPositioner.cpp
+        XdgPopup.cpp
         XdgSurface.cpp
         XdgToplevel.cpp
         XdgWmBase.cpp

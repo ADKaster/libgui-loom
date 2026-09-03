@@ -22,6 +22,7 @@ class Shm;
 class ShmPool;
 class Surface;
 class XdgPopup;
+class XdgPositioner;
 class XdgSurface;
 class XdgToplevel;
 class XdgWmBase;

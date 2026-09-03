@@ -8,6 +8,7 @@
 #include <AK/Vector.h>
 #include <LibGfx/Rect.h>
 #include <LibWayland/XdgPopup.h>
+#include <LibWayland/XdgPositioner.h>
 #include <LibWayland/XdgSurface.h>
 
 #define XDG_POPUP_DEBUG 1
@@ -50,8 +51,10 @@ static constexpr xdg_popup_listener s_popup_listener {
     .repositioned = xdg_popup_repositioned
 };
 
-XdgPopup::XdgPopup(xdg_popup* xdg_popup, NonnullOwnPtr<XdgSurface> xdg_surface)
+XdgPopup::XdgPopup(xdg_popup* xdg_popup, NonnullOwnPtr<XdgSurface> xdg_surface, XdgSurface* parent_surface, NonnullOwnPtr<XdgPositioner> positioner)
     : m_xdg_surface(move(xdg_surface))
+    , m_parent_surface(parent_surface)
+    , m_positioner(move(positioner))
     , m_xdg_popup(xdg_popup)
 {
     VERIFY(m_xdg_popup != nullptr);
@@ -61,6 +64,12 @@ XdgPopup::XdgPopup(xdg_popup* xdg_popup, NonnullOwnPtr<XdgSurface> xdg_surface)
 XdgPopup::~XdgPopup()
 {
     xdg_popup_destroy(m_xdg_popup);
+}
+
+void XdgPopup::reposition(NonnullOwnPtr<XdgPositioner> positioner, u32 token)
+{
+    m_positioner = move(positioner);
+    xdg_popup_reposition(m_xdg_popup, m_positioner->ptr(), token);
 }
 
 }
