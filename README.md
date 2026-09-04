@@ -20,6 +20,36 @@ Set `$SERENITY_SOURCE_DIR` to your serenity checkout
 On non-macOS, the development packages for libdbus-1 and libxkbcommon are required on top of Serenity dependencies.
 The Wayland development packages can be handled automatically via FetchContent, or provided by your system package manager.
 
+# Running and Testing
+
+LibGUI apps require all of their IPC services to be up and running before they can properly start. Therefore, Loom
+must be running before any app. On macOS, this requirement is WIP. On non-macOS using Wayland, this is handled by
+declaring Loom a D-Bus service and having apps request it through D-Bus activation. A helper script in meta/ does this
+in a non-intrusive way by starting a new D-Bus session that knows about the Loom service file in the build directory.
+
+To use the helper script:
+
+```shell
+python3 ./meta/run_dbus.py --app <app_name> 
+```
+
+To run manually:
+
+```shell
+# Start Loom in one terminal
+SERENITY_SOURCE_DIR=<path_to_serenity> ./build/bin/Loom
+
+# Start your app in another terminal
+SERENITY_SOURCE_DIR=<path_to_serenity> ./build/bin/<app_name>
+```
+
+Apps currently built in this repo include:
+
+- BasicApp (a test app with one button and that's it)
+- Calculator
+- PDFViewer
+- PixelPaint
+
 # Architecture
 
 ## IPC
