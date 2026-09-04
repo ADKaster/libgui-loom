@@ -9,12 +9,12 @@
 #include <AK/Platform.h>
 #include <AK/Types.h>
 
-#if defined(AK_OS_LINUX)
+#if __has_include(<linux/input-event-codes.h>)
 #    include <linux/input-event-codes.h>
+#elif __has_include(<libevdev/libevdev.h>)
+#    include <libevdev/libevdev.h>
 #elif defined(AK_OS_FREEBSD) || defined(AK_OS_DRAGONFLY)
 #    include <dev/evdev/input-event-codes.h>
-#elif defined(AK_OS_OPENBSD) || defined(AK_OS_NETBSD)
-#    include <dev/wscons/input-event-codes.h>
 #else
 #    define BTN_LEFT 0x110
 #    define BTN_RIGHT 0x111
