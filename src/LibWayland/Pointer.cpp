@@ -19,6 +19,9 @@ void Pointer::pointer_enter(void* data, wl_pointer* pointer, u32 serial, wl_surf
     VERIFY(self.ptr() == pointer);
     dbgln_if(WAYLAND_POINTER_DEBUG, "Pointer::pointer_enter: serial={}, surface={}, surface_x={}, surface_y={}", serial, surface, wl_fixed_to_double(surface_x), wl_fixed_to_double(surface_y));
 
+    if (!surface) // FIXME: Tell someone that there's no focused window?
+        return;
+
     self.m_pending_events.empend(EnterEvent {
         .surface = static_cast<Surface*>(wl_surface_get_user_data(surface)),
         .serial = serial,
@@ -31,6 +34,9 @@ void Pointer::pointer_leave(void* data, wl_pointer* pointer, u32 serial, wl_surf
     auto& self = *static_cast<Pointer*>(data);
     VERIFY(self.ptr() == pointer);
     dbgln_if(WAYLAND_POINTER_DEBUG, "Pointer::pointer_leave: serial={}, surface={}", serial, surface);
+
+    if (!surface) // FIXME: Tell someone that there's no focused window?
+        return;
 
     self.m_pending_events.empend(LeaveEvent {
         .surface = static_cast<Surface*>(wl_surface_get_user_data(surface)),
