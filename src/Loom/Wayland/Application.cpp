@@ -6,6 +6,7 @@
 
 #include <AK/Format.h>
 #include <LibCore/ArgsParser.h>
+#include <LibCore/ConfigFile.h>
 #include <LibCore/EventLoop.h>
 #include <LibDBus/Bus.h>
 #include <LibDBus/Connection.h>
@@ -143,7 +144,13 @@ WindowServer::SystemEffects& Application::system_effects() const
 
 static NonnullRefPtr<Gfx::PaletteImpl> initialize_libgfx_globals(StringView theme_name)
 {
-    auto theme = MUST(Gfx::load_system_theme(ByteString::formatted("resource://themes/{}.ini", theme_name)));
+    auto theme_path = ByteString::formatted("resource://themes/{}.ini", theme_name);
+    auto theme_config = MUST(Core::ConfigFile::open(theme_path));
+    auto color_scheme_path = theme_config->read_entry("Paths", "ColorScheme", "resource://color-schemes/Default.ini");
+    if (color_scheme_path.starts_with("/res/"sv))
+        color_scheme_path = ByteString::formatted("resource://{}", color_scheme_path.substring_view(5));
+
+    auto theme = MUST(Gfx::load_system_theme(theme_path, color_scheme_path));
     Gfx::set_system_theme(theme);
     auto palette = Gfx::PaletteImpl::create_with_anonymous_buffer(theme);
 
