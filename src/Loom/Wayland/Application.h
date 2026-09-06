@@ -26,6 +26,7 @@ class SystemEffects;
 namespace Loom {
 
 class IPCBridge;
+class SeatDelegate;
 
 class Application {
 public:
@@ -40,6 +41,7 @@ public:
     int exec();
 
     [[nodiscard]] Wayland::Display& display() { return *m_display; }
+    [[nodiscard]] SeatDelegate& seat_delegate();
     [[nodiscard]] StringView app_id() const;
 
     [[nodiscard]] Gfx::Palette palette() const { return Palette(*m_palette_impl); }
@@ -51,6 +53,7 @@ private:
 
     RefPtr<Gfx::PaletteImpl> m_palette_impl;
     OwnPtr<Wayland::Display> m_display;
+    OwnPtr<SeatDelegate> m_seat_delegate;
     OwnPtr<IPCBridge> m_ipc_bridge;
     OwnPtr<Core::EventLoop> m_event_loop;
     OwnPtr<DBus::ObjectRegistration> m_dbus_interface_registration;

@@ -13,6 +13,9 @@
 #include <LibWayland/XdgWmBase.h>
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Window.h>
+
+#include "SeatDelegate.h"
+
 #include <Loom/Wayland/WindowFrame.h>
 
 namespace Loom {
@@ -39,9 +42,14 @@ Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgTo
     m_toplevel->on_close = [this] {
         m_client.async_window_close_request(m_window_id);
     };
+
+    Application::the().seat_delegate().register_surface_owner(m_toplevel->surface().surface(), *this);
 }
 
-Window::~Window() = default;
+Window::~Window()
+{
+    Application::the().seat_delegate().unregister_surface_owner(m_toplevel->surface().surface());
+}
 
 NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Wayland::Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, WindowFlags flags, Window* parent_window)
 {

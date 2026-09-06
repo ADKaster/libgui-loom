@@ -14,6 +14,20 @@
 
 namespace Wayland {
 
+static KeyState to_keystate(wl_keyboard_key_state key_state)
+{
+    switch (key_state) {
+    case WL_KEYBOARD_KEY_STATE_RELEASED:
+        return KeyState::Released;
+    case WL_KEYBOARD_KEY_STATE_PRESSED:
+        return KeyState::Pressed;
+    case WL_KEYBOARD_KEY_STATE_REPEATED:
+        return KeyState::Repeated;
+    default:
+        VERIFY_NOT_REACHED();
+    }
+}
+
 void Keyboard::keyboard_keymap(void* data, wl_keyboard* keyboard, u32 format, i32 fd, u32 size)
 {
     auto& self = *static_cast<Keyboard*>(data);
@@ -21,6 +35,7 @@ void Keyboard::keyboard_keymap(void* data, wl_keyboard* keyboard, u32 format, i3
 
     if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
         warnln("Keyboard::keyboard_keymap: Unsupported keymap format: {}", format);
+        ::close(fd);
         return;
     }
 
@@ -43,6 +58,13 @@ void Keyboard::keyboard_enter(void* data, wl_keyboard* keyboard, u32 serial, wl_
     auto& self = *static_cast<Keyboard*>(data);
     VERIFY(self.ptr() == keyboard);
     dbgln("Keyboard::keyboard_enter: serial={}, surface={}, keys={}", serial, surface, keys->size / sizeof(u32));
+
+    self.m_focused_surface = static_cast<Surface*>(wl_surface_get_user_data(surface));
+
+    if (!self.m_delegate)
+        return;
+
+    self.m_delegate->on_keyboard_enter(self, self.m_focused_surface, serial);
 }
 
 void Keyboard::keyboard_leave(void* data, wl_keyboard* keyboard, u32 serial, wl_surface* surface)
@@ -50,6 +72,15 @@ void Keyboard::keyboard_leave(void* data, wl_keyboard* keyboard, u32 serial, wl_
     auto& self = *static_cast<Keyboard*>(data);
     VERIFY(self.ptr() == keyboard);
     dbgln("Keyboard::keyboard_leave: serial={}, surface={}", serial, surface);
+
+    auto* left_surface = static_cast<Surface*>(wl_surface_get_user_data(surface));
+    VERIFY(self.m_focused_surface == left_surface);
+    self.m_focused_surface = nullptr;
+
+    if (!self.m_delegate)
+        return;
+
+    self.m_delegate->on_keyboard_leave(self, left_surface, serial);
 }
 
 void Keyboard::keyboard_key(void* data, wl_keyboard* keyboard, u32 serial, u32 time, u32 key, u32 state)
@@ -58,14 +89,16 @@ void Keyboard::keyboard_key(void* data, wl_keyboard* keyboard, u32 serial, u32 t
     VERIFY(self.ptr() == keyboard);
     dbgln("Keyboard::keyboard_key: serial={}, time={}, key={}, state={}", serial, time, key, state);
 
-    auto key_state = static_cast<KeyState>(state);
-    auto keycode = key + 8; // XKB keycodes are offset by 8 from raw edev keycodes from Compositor
+    auto key_state = to_keystate(static_cast<wl_keyboard_key_state>(state));
+    auto xkb_keycode = key + 8; // XKB keycodes are offset by 8 from raw edev keycodes from Compositor
 
-    xkb_keysym_t const* syms = nullptr;;
-    auto nsyms = xkb_state_key_get_syms(self.m_state, keycode, &syms);
+    auto const keysym = xkb_state_key_get_one_sym(self.m_state, xkb_keycode);
+    auto const code_point = xkb_state_key_get_utf32(self.m_state, xkb_keycode);
 
-    (void)key_state;
-    (void)nsyms;
+    if (!self.m_delegate)
+        return;
+
+    self.m_delegate->on_keyboard_key(self, self.m_focused_surface, serial, Duration::from_milliseconds(time), key, key_state, keysym, code_point, self.modifiers());
 }
 
 void Keyboard::keyboard_modifiers(void* data, wl_keyboard* keyboard, u32 serial, u32 mods_depressed, u32 mods_latched, u32 mods_locked, u32 group)
@@ -113,6 +146,27 @@ Keyboard::~Keyboard()
         xkb_keymap_unref(m_keymap);
     if (m_state)
         xkb_state_unref(m_state);
+}
+
+KeyboardModifier Keyboard::modifiers() const
+{
+    if (!m_state)
+        return KeyboardModifier::None;
+
+    auto modifiers = KeyboardModifier::None;
+
+    if (xkb_state_mod_name_is_active(m_state, XKB_VMOD_NAME_ALT, XKB_STATE_MODS_EFFECTIVE))
+        modifiers |= KeyboardModifier::Alt;
+    if (xkb_state_mod_name_is_active(m_state, XKB_MOD_NAME_CTRL, XKB_STATE_MODS_EFFECTIVE))
+        modifiers |= KeyboardModifier::Ctrl;
+    if (xkb_state_mod_name_is_active(m_state, XKB_MOD_NAME_SHIFT, XKB_STATE_MODS_EFFECTIVE))
+        modifiers |= KeyboardModifier::Shift;
+    if (xkb_state_mod_name_is_active(m_state, XKB_VMOD_NAME_SUPER, XKB_STATE_MODS_EFFECTIVE))
+        modifiers |= KeyboardModifier::Super;
+    if (xkb_state_mod_name_is_active(m_state, XKB_VMOD_NAME_LEVEL3, XKB_STATE_MODS_EFFECTIVE))
+        modifiers |= KeyboardModifier::AltGr;
+
+    return modifiers;
 }
 
 }

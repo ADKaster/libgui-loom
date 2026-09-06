@@ -32,12 +32,6 @@ public:
     Function<void(Output&)> on_enter;
     Function<void(Output&)> on_leave;
 
-    Function<void(Pointer&, u32 serial, Gfx::IntPoint)> on_pointer_enter;
-    Function<void(Pointer&, u32 serial)> on_pointer_leave;
-    Function<void(Pointer&, Duration, Gfx::IntPoint)> on_pointer_motion;
-    Function<void(Pointer&, u32 serial, Duration, RawMouseButton, MouseButtonState)> on_pointer_button;
-    Function<void(Pointer& /* FIXME: Axis state */)> on_pointer_axis;
-
     i32 preferred_buffer_scale() const { return m_preferred_buffer_scale; }
     u32 preferred_transform() const { return m_preferred_transform; }
 

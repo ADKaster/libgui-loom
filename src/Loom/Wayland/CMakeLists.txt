@@ -4,6 +4,7 @@ add_executable(Loom
     Application.cpp
     Button.cpp
     ScreenLayout.cpp
+    SeatDelegate.cpp
     Window.cpp
     WindowFrame.cpp
     WindowServerConnectionProxy.cpp

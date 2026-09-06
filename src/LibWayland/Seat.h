@@ -38,8 +38,8 @@ public:
     RETURNS_NONNULL [[nodiscard]] wl_seat* ptr() const { return m_seat; }
 
     [[nodiscard]] ByteString const& name() const { return m_name; }
-    [[nodiscard]] Keyboard const* keyboard() const { return m_keyboard.ptr(); }
-    [[nodiscard]] Pointer const* pointer() const { return m_pointer.ptr(); }
+    [[nodiscard]] Keyboard* keyboard() const { return m_keyboard.ptr(); }
+    [[nodiscard]] Pointer* pointer() const { return m_pointer.ptr(); }
 
 private:
     wl_seat* m_seat;

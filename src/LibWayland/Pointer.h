@@ -52,6 +52,7 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] wl_pointer* ptr() const { return m_pointer; }
 
+    void set_delegate(PointerDelegate* delegate) { m_delegate = delegate; }
     void set_cursor(i32 serial, Surface& surface, Gfx::IntPoint hotspot);
 
 private:
@@ -87,13 +88,11 @@ private:
     };
 
     struct MotionEvent {
-        Surface* surface { nullptr };
         Duration time;
         Gfx::IntPoint position;
     };
 
     struct ButtonEvent {
-        Surface* surface { nullptr };
         u32 serial { 0 };
         Duration time;
         RawMouseButton button { RawMouseButton::Left };
@@ -101,12 +100,14 @@ private:
     };
 
     struct AxisEvent {
-        Surface* surface { nullptr };
         // FIXME: Handle mouse wheel etc.
     };
 
     using Event = Variant<EnterEvent, LeaveEvent, MotionEvent, ButtonEvent, AxisEvent>;
     Vector<Event, 4> m_pending_events;
+
+    PointerDelegate* m_delegate { nullptr };
+    Surface* m_focused_surface { nullptr };
 };
 
 }

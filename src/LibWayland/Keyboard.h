@@ -9,6 +9,7 @@
 #include <AK/Noncopyable.h>
 #include <AK/Platform.h>
 #include <LibWayland/Interface.h>
+#include <LibWayland/KeyboardDelegate.h>
 #include <wayland-client.h>
 
 extern "C" {
@@ -30,17 +31,18 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] wl_keyboard* ptr() const { return m_keyboard; }
 
-    enum class KeyState : u32 {
-        Released = WL_KEYBOARD_KEY_STATE_RELEASED,
-        Pressed = WL_KEYBOARD_KEY_STATE_PRESSED,
-        Repeated = WL_KEYBOARD_KEY_STATE_REPEATED,
-    };
+    void set_delegate(KeyboardDelegate* delegate) { m_delegate = delegate; }
 
 private:
     wl_keyboard* m_keyboard;
     xkb_context* m_context { nullptr };
     xkb_keymap* m_keymap { nullptr };
     xkb_state* m_state { nullptr };
+
+    KeyboardDelegate* m_delegate { nullptr };
+    Surface* m_focused_surface { nullptr };
+
+    [[nodiscard]] KeyboardModifier modifiers() const;;
 
     static void keyboard_keymap(void* data, wl_keyboard* keyboard, u32 format, i32 fd, u32 size);
     static void keyboard_enter(void* data, wl_keyboard* keyboard, u32 serial, wl_surface* surface, wl_array* keys);

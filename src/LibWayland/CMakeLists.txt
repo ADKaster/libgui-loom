@@ -46,5 +46,4 @@ lagom_lib(LibWayland wayland
 )
 
 target_include_directories(LibWayland SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/wayland-protocols)
-target_link_libraries(LibWayland PUBLIC Wayland::Client)
-target_link_libraries(LibWayland PRIVATE PkgConfig::XKBCommon)
+target_link_libraries(LibWayland PUBLIC Wayland::Client PkgConfig::XKBCommon)

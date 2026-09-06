@@ -7,6 +7,7 @@
 #include <AK/Assertions.h>
 #include <AK/Format.h>
 #include <LibWayland/Pointer.h>
+#include <LibWayland/PointerDelegate.h>
 #include <LibWayland/Surface.h>
 
 namespace Wayland {
@@ -18,9 +19,6 @@ void Pointer::pointer_enter(void* data, wl_pointer* pointer, u32 serial, wl_surf
     auto& self = *static_cast<Pointer*>(data);
     VERIFY(self.ptr() == pointer);
     dbgln_if(WAYLAND_POINTER_DEBUG, "Pointer::pointer_enter: serial={}, surface={}, surface_x={}, surface_y={}", serial, surface, wl_fixed_to_double(surface_x), wl_fixed_to_double(surface_y));
-
-    if (!surface) // FIXME: Tell someone that there's no focused window?
-        return;
 
     self.m_pending_events.empend(EnterEvent {
         .surface = static_cast<Surface*>(wl_surface_get_user_data(surface)),
@@ -34,9 +32,6 @@ void Pointer::pointer_leave(void* data, wl_pointer* pointer, u32 serial, wl_surf
     auto& self = *static_cast<Pointer*>(data);
     VERIFY(self.ptr() == pointer);
     dbgln_if(WAYLAND_POINTER_DEBUG, "Pointer::pointer_leave: serial={}, surface={}", serial, surface);
-
-    if (!surface) // FIXME: Tell someone that there's no focused window?
-        return;
 
     self.m_pending_events.empend(LeaveEvent {
         .surface = static_cast<Surface*>(wl_surface_get_user_data(surface)),
@@ -185,34 +180,27 @@ void Pointer::dispatch_pending_events()
     for (auto& event : events) {
         event.visit(
             [&](EnterEvent const& enter) {
-                if (!enter.surface)
-                    return;
-                if (enter.surface->on_pointer_enter)
-                    enter.surface->on_pointer_enter(*this, enter.serial, enter.position);
+                m_focused_surface = enter.surface;
+                if (m_delegate && m_delegate->on_pointer_enter)
+                    m_delegate->on_pointer_enter(*this, m_focused_surface, enter.serial, enter.position);
             },
             [&](LeaveEvent const& leave) {
-                if (!leave.surface)
-                    return;
-                if (leave.surface->on_pointer_leave)
-                    leave.surface->on_pointer_leave(*this, leave.serial);
+                VERIFY(m_focused_surface == leave.surface);
+                if (m_delegate && m_delegate->on_pointer_leave)
+                    m_delegate->on_pointer_leave(*this, m_focused_surface, leave.serial);
+                m_focused_surface = nullptr;
             },
             [&](MotionEvent const& motion) {
-                if (!motion.surface)
-                    return;
-                if (motion.surface->on_pointer_motion)
-                    motion.surface->on_pointer_motion(*this, motion.time, motion.position);
+                if (m_delegate && m_delegate->on_pointer_motion)
+                    m_delegate->on_pointer_motion(*this, m_focused_surface, motion.time, motion.position);
             },
             [&](ButtonEvent const& button) {
-                if (!button.surface)
-                    return;
-                if (button.surface->on_pointer_button)
-                    button.surface->on_pointer_button(*this, button.serial, button.time, button.button, to_mouse_button_state(button.state));
+                if (m_delegate && m_delegate->on_pointer_button)
+                    m_delegate->on_pointer_button(*this, m_focused_surface, button.serial, button.time, button.button, to_mouse_button_state(button.state));
             },
-            [&](AxisEvent const& axis) {
-                if (!axis.surface)
-                    return;
-                if (axis.surface->on_pointer_axis)
-                    axis.surface->on_pointer_axis(*this);
+            [&](AxisEvent const&) {
+                if (m_delegate && m_delegate->on_pointer_axis)
+                    m_delegate->on_pointer_axis(*this);
             });
     }
 }

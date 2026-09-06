@@ -15,11 +15,15 @@
 #include <LibGfx/SystemTheme.h>
 #include <Loom/IPCBridge.h>
 #include <Loom/Wayland/Application.h>
-#include <LibWayland/Display.h>
+#include <Loom/Wayland/SeatDelegate.h>
 #include <Loom/Wayland/WindowFrame.h>
 #include <LibWayland/Callback.h>
+#include <LibWayland/Display.h>
+#include <LibWayland/Keyboard.h>
 #include <LibWayland/Output.h>
+#include <LibWayland/Pointer.h>
 #include <LibWayland/Registry.h>
+#include <LibWayland/Seat.h>
 #include <Services/WindowServer/ScreenLayout.h>
 #include <Services/WindowServer/SystemEffects.h>
 
@@ -71,7 +75,7 @@ WindowServer::ScreenLayout Application::screen_layout() const
 
         screen_layout.screens.append(WindowServer::ScreenLayout::Screen {
             .mode = WindowServer::ScreenLayout::Screen::Mode::Virtual,
-            .device = {},
+            .device = output->name().to_byte_string(),
             .location = { geometry.x, geometry.y },
             .resolution = { width, height },
             .scale_factor = output->scale(),
@@ -177,13 +181,19 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
     m_display = Wayland::Display::create(display_name);
 
     // Ensure globals are bound before we start processing events
-    [[maybe_unused]] auto& registry = m_display->registry();
+    auto& registry = m_display->registry();
     auto sync_cb = m_display->sync();
 
     m_palette_impl = initialize_libgfx_globals(system_theme);
     WindowFrame::load_theme_config();
 
     TRY(sync_cb->promise().await());
+
+    m_seat_delegate = make<SeatDelegate>();
+    if (auto* pointer = registry.seat().pointer())
+        pointer->set_delegate(m_seat_delegate.ptr());
+    if (auto* keyboard = registry.seat().keyboard())
+        keyboard->set_delegate(m_seat_delegate.ptr());
 
     m_ipc_bridge = IPCBridge::create();
 
@@ -197,6 +207,12 @@ int Application::exec()
     VERIFY(m_event_loop);
 
     return m_event_loop->exec();
+}
+
+SeatDelegate& Application::seat_delegate()
+{
+    VERIFY(m_seat_delegate);
+    return *m_seat_delegate;
 }
 
 StringView Application::app_id() const

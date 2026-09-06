@@ -14,8 +14,10 @@ class Compositor;
 class Display;
 class Fixes;
 class Keyboard;
+struct KeyboardDelegate;
 class Output;
 class Pointer;
+struct PointerDelegate;
 class Registry;
 class Seat;
 class Shm;
@@ -28,4 +30,3 @@ class XdgToplevel;
 class XdgWmBase;
 
 }
-
