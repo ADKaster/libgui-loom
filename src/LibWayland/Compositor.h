@@ -21,7 +21,7 @@ class Compositor {
 public:
     WAYLAND_INTERFACE(wl_compositor);
 
-    explicit Compositor(wl_compositor* compositor);
+    Compositor(wl_compositor* compositor, u32 version);
     ~Compositor();
 
     RETURNS_NONNULL [[nodiscard]] wl_compositor* ptr() const { return m_compositor; }
@@ -30,6 +30,7 @@ public:
 
 private:
     wl_compositor* m_compositor;
+    u32 m_version { 0 };
 };
 
 }

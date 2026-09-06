@@ -318,8 +318,7 @@ void WindowServerConnectionProxy::invalidate_rect(i32 window_id, Vector<Gfx::Int
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: invalidate_rect(window_id={}, rects={}, ignore_occlusion={})", window_id, rects, ignore_occlusion);
     (void)ignore_occlusion;
     if (auto window = m_impl->windows.get(window_id); window.has_value()) {
-        // FIXME: Something something pending paint rects, like WindowServer does
-        async_paint(window_id, (*window)->content_rect().size(), rects);
+        (*window)->invalidate(rects);
         return;
     }
 
@@ -330,9 +329,12 @@ void WindowServerConnectionProxy::did_finish_painting(i32 window_id, Vector<Gfx:
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: did_finish_painting(window_id={}, rects={})", window_id, rects);
 
-    // FIXME: Clear pending paint rects, presumably
-    (void)window_id;
-    (void)rects;
+    if (auto window = m_impl->windows.get(window_id); window.has_value()) {
+        (*window)->did_finish_painting(rects);
+        return;
+    }
+
+    did_misbehave("DidFinishPainting: Bad window ID");
 }
 
 void WindowServerConnectionProxy::set_global_mouse_tracking(bool enabled)
@@ -344,7 +346,6 @@ void WindowServerConnectionProxy::set_global_mouse_tracking(bool enabled)
 void WindowServerConnectionProxy::set_window_backing_store(i32 window_id, i32 bpp, i32 pitch, IPC::File const& anon_file, i32 serial, bool has_alpha_channel, Gfx::IntSize size, Gfx::IntSize visible_size, bool flush_immediately)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_backing_store(window_id={}, bpp={}, pitch={}, serial={}, has_alpha_channel={}, size={}, visible_size={}, flush_immediately={})", window_id, bpp, pitch, serial, has_alpha_channel, size, visible_size, flush_immediately);
-    (void)serial;
     (void)visible_size;
     (void)flush_immediately;
 
@@ -360,8 +361,10 @@ void WindowServerConnectionProxy::set_window_backing_store(i32 window_id, i32 bp
         return;
     }
 
-    // FIXME: Use serial to manage double buffering of client data
-    // FIXME: Or, at least, figure out if its necessary when Wayland compositor will double buffer itself
+    if (window.last_content_backing_store() && serial == window.last_content_backing_store_serial()) {
+        window.swap_content_backing_stores();
+        return;
+    }
 
     auto buffer_or_error = Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), pitch * size.height());
     if (buffer_or_error.is_error()) {
@@ -375,7 +378,7 @@ void WindowServerConnectionProxy::set_window_backing_store(i32 window_id, i32 bp
         return;
     }
 
-    window.set_content(bitmap.release_value());
+    window.set_content_backing_store(bitmap.release_value(), serial);
 }
 
 void WindowServerConnectionProxy::set_window_has_alpha_channel(i32 window_id, bool has_alpha_channel)
@@ -527,8 +530,6 @@ void WindowServerConnectionProxy::set_window_icon_bitmap(i32 window_id, Gfx::Sha
         window.set_icon(*icon.bitmap());
     else
         window.set_default_icon();
-
-    // FIXME: invalidate window frame titlebar
 }
 
 Messages::WindowServer::StartDragResponse WindowServerConnectionProxy::start_drag(ByteString const& text, HashMap<String, ByteBuffer> const& mime_data, Gfx::ShareableBitmap const& drag_bitmap)
@@ -785,14 +786,24 @@ Messages::WindowServer::IsNaturalScrollResponse WindowServerConnectionProxy::is_
 void WindowServerConnectionProxy::set_window_modified(i32 window_id, bool modified)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_modified(window_id={}, modified={})", window_id, modified);
-    (void)window_id;
-    (void)modified;
+
+    auto maybe_window = m_impl->windows.get(window_id);
+    if (!maybe_window.has_value()) {
+        did_misbehave("SetWindowModified: Bad window ID");
+        return;
+    }
+
+    auto& window = **maybe_window;
+    window.set_modified(modified);
 }
 
 Messages::WindowServer::IsWindowModifiedResponse WindowServerConnectionProxy::is_window_modified(i32 window_id)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: is_window_modified(window_id={})", window_id);
-    (void)window_id;
+    if (auto window = m_impl->windows.get(window_id); window.has_value())
+        return (*window)->is_modified();
+
+    did_misbehave("IsWindowModified: Bad window ID");
     return nullptr;
 }
 

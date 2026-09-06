@@ -24,7 +24,7 @@ class Surface {
 public:
     WAYLAND_INTERFACE(wl_surface);
 
-    explicit Surface(wl_surface* surface);
+    Surface(wl_surface* surface, u32 version);
     ~Surface();
 
     RETURNS_NONNULL [[nodiscard]] wl_surface* ptr() const { return m_surface; }
@@ -35,12 +35,15 @@ public:
     i32 preferred_buffer_scale() const { return m_preferred_buffer_scale; }
     u32 preferred_transform() const { return m_preferred_transform; }
 
-    void attach(OwnPtr<Buffer> buffer, i32 x, i32 y);
+    void attach(Buffer&, i32 x, i32 y);
+    void damage(Gfx::IntRect const&);
+    void damage_buffer(Gfx::IntRect const&);
+    NonnullOwnPtr<Callback> frame();
     void commit();
 
 private:
     wl_surface* m_surface;
-    OwnPtr<Buffer> m_pending_buffer;
+    u32 m_version;
 
     static void surface_preferred_buffer_scale(void* data, wl_surface*, i32 scale);
     static void surface_preferred_transform(void* data, wl_surface*, u32 transform);

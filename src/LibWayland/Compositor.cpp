@@ -10,8 +10,9 @@
 
 namespace Wayland {
 
-Compositor::Compositor(wl_compositor* compositor)
+Compositor::Compositor(wl_compositor* compositor, u32 version)
     : m_compositor(compositor)
+    , m_version(version)
 {
     VERIFY(m_compositor != nullptr);
 }
@@ -23,7 +24,7 @@ Compositor::~Compositor()
 
 NonnullOwnPtr<Surface> Compositor::create_surface()
 {
-    return make<Surface>(wl_compositor_create_surface(m_compositor));
+    return make<Surface>(wl_compositor_create_surface(m_compositor), m_version);
 }
 
 }

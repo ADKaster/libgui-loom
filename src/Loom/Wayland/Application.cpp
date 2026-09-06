@@ -190,10 +190,8 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
     TRY(sync_cb->promise().await());
 
     m_seat_delegate = make<SeatDelegate>();
-    if (auto* pointer = registry.seat().pointer())
-        pointer->set_delegate(m_seat_delegate.ptr());
-    if (auto* keyboard = registry.seat().keyboard())
-        keyboard->set_delegate(m_seat_delegate.ptr());
+    registry.seat().set_pointer_delegate(m_seat_delegate);
+    registry.seat().set_keyboard_delegate(m_seat_delegate);
 
     m_ipc_bridge = IPCBridge::create();
 

@@ -7,8 +7,10 @@
 #include <AK/Assertions.h>
 #include <AK/Format.h>
 #include <LibWayland/Buffer.h>
+#include <LibWayland/Callback.h>
 #include <LibWayland/Output.h>
 #include <LibWayland/Surface.h>
+#include <LibGfx/Rect.h>
 
 #define SURFACE_DEBUG 1
 
@@ -59,8 +61,9 @@ const wl_surface_listener Surface::s_surface_listener = {
     .preferred_buffer_transform = surface_preferred_transform,
 };
 
-Surface::Surface(wl_surface* surface)
+Surface::Surface(wl_surface* surface, u32 version)
     : m_surface(surface)
+    , m_version(version)
 {
     VERIFY(m_surface != nullptr);
     wl_surface_add_listener(m_surface, &s_surface_listener, this);
@@ -73,10 +76,29 @@ Surface::~Surface()
     wl_surface_destroy(m_surface);
 }
 
-void Surface::attach(OwnPtr<Buffer> buffer, i32 x, i32 y)
+void Surface::attach(Buffer& buffer, i32 x, i32 y)
 {
-    wl_surface_attach(m_surface, buffer->ptr(), x, y);
-    m_pending_buffer = move(buffer);
+    wl_surface_attach(m_surface, buffer.ptr(), x, y);
+}
+
+void Surface::damage(Gfx::IntRect const& rect)
+{
+    wl_surface_damage(m_surface, rect.x(), rect.y(), rect.width(), rect.height());
+}
+
+void Surface::damage_buffer(Gfx::IntRect const& rect)
+{
+#if defined(WL_SURFACE_DAMAGE_BUFFER)
+    if (m_version >= WL_SURFACE_DAMAGE_BUFFER_SINCE_VERSION)
+        wl_surface_damage_buffer(m_surface, rect.x(), rect.y(), rect.width(), rect.height());
+    else
+#endif
+        damage(rect);
+}
+
+NonnullOwnPtr<Callback> Surface::frame()
+{
+    return make<Callback>(wl_surface_frame(m_surface));
 }
 
 void Surface::commit()

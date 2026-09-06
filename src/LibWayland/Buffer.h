@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/Function.h>
 #include <AK/Noncopyable.h>
 #include <AK/Platform.h>
 #include <LibWayland/Interface.h>
@@ -24,7 +25,12 @@ public:
 
     RETURNS_NONNULL [[nodiscard]] wl_buffer* ptr() const { return m_buffer; }
 
+    Function<void()> on_release;
+
 private:
+    static void buffer_release(void*, wl_buffer*);
+    static wl_buffer_listener const s_buffer_listener;
+
     wl_buffer* m_buffer;
 };
 

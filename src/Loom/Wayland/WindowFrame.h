@@ -7,7 +7,9 @@
 #pragma once
 
 #include <AK/Noncopyable.h>
-#include <LibCore/AnonymousBuffer.h>
+#include <AK/NonnullOwnPtr.h>
+#include <AK/OwnPtr.h>
+#include <AK/Vector.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Rect.h>
 #include <LibWayland/Forward.h>
@@ -26,7 +28,10 @@ public:
 
     static void load_theme_config();
 
-    void window_content_changed(Badge<Window>);
+    void content_paint_finished(Badge<Window>, Vector<Gfx::IntRect> const& damaged_rects);
+    void content_rect_changed(Badge<Window>);
+    void invalidate_decorations(Badge<Window>);
+    void surface_configured(Badge<Window>);
 
     [[nodiscard]] Window& window() const { return m_window; }
 
@@ -42,13 +47,24 @@ public:
 
 private:
 
+    struct OutputBuffer {
+        RefPtr<Gfx::Bitmap> bitmap;
+        NonnullOwnPtr<Wayland::Buffer> buffer;
+        bool released { false };
+    };
+
     Gfx::Bitmap* shadow_bitmap() const;
+    void paint_frame(Gfx::Bitmap&);
+    void discard_released_buffers();
+    void present_if_possible();
 
     Window& m_window;
     Wayland::Shm& m_shm;
 
-    Core::AnonymousBuffer m_render_buffer;
-    RefPtr<Gfx::Bitmap> m_render_bitmap;
+    RefPtr<Gfx::Bitmap> m_content_snapshot_bitmap;
+    Vector<NonnullOwnPtr<OutputBuffer>> m_submitted_buffers;
+    OwnPtr<Wayland::Callback> m_frame_callback;
+    bool m_pending_present { false };
 
 };
 

@@ -11,13 +11,11 @@
 #include <AK/OwnPtr.h>
 #include <AK/Platform.h>
 #include <AK/ByteString.h>
+#include <LibWayland/Forward.h>
 #include <LibWayland/Interface.h>
 #include <wayland-client.h>
 
 namespace Wayland {
-
-class Keyboard;
-class Pointer;
 
 class Seat {
     AK_MAKE_NONCOPYABLE(Seat);
@@ -41,6 +39,9 @@ public:
     [[nodiscard]] Keyboard* keyboard() const { return m_keyboard.ptr(); }
     [[nodiscard]] Pointer* pointer() const { return m_pointer.ptr(); }
 
+    void set_keyboard_delegate(KeyboardDelegate* delegate) { m_keyboard_delegate = delegate; }
+    void set_pointer_delegate(PointerDelegate* delegate) { m_pointer_delegate = delegate; }
+
 private:
     wl_seat* m_seat;
 
@@ -53,6 +54,9 @@ private:
     OwnPtr<Keyboard> m_keyboard;
     OwnPtr<Pointer> m_pointer;
     // FIXME: Touch
+
+    KeyboardDelegate* m_keyboard_delegate { nullptr };
+    PointerDelegate* m_pointer_delegate { nullptr };
 };
 
 AK_ENUM_BITWISE_OPERATORS(Seat::Capabilities);

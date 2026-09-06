@@ -18,10 +18,16 @@ void Seat::seat_capabilities(void* data, wl_seat* seat, u32 capabilities)
     VERIFY(self.ptr() == seat);
     dbgln("Seat::seat_capabilities: capabilities={}", capabilities);
     auto caps = static_cast<Capabilities>(capabilities);
-    if (!self.m_pointer && has_flag(caps, Capabilities::Pointer))
+    if (!self.m_pointer && has_flag(caps, Capabilities::Pointer)) {
         self.m_pointer = make<Pointer>(wl_seat_get_pointer(seat));
-    if (!self.m_keyboard && has_flag(caps, Capabilities::Keyboard))
+        if (self.m_pointer_delegate)
+            self.m_pointer->set_delegate(self.m_pointer_delegate);
+    }
+    if (!self.m_keyboard && has_flag(caps, Capabilities::Keyboard)) {
         self.m_keyboard = make<Keyboard>(wl_seat_get_keyboard(seat));
+        if (self.m_keyboard_delegate)
+            self.m_keyboard->set_delegate(self.m_keyboard_delegate);
+    }
 }
 
 void Seat::seat_name(void* data, wl_seat* seat, const char* name)

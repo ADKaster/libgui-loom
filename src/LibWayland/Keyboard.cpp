@@ -14,6 +14,8 @@
 
 namespace Wayland {
 
+#define WAYLAND_KEYBOARD_DEBUG 1
+
 static KeyState to_keystate(wl_keyboard_key_state key_state)
 {
     switch (key_state) {
@@ -57,7 +59,7 @@ void Keyboard::keyboard_enter(void* data, wl_keyboard* keyboard, u32 serial, wl_
 {
     auto& self = *static_cast<Keyboard*>(data);
     VERIFY(self.ptr() == keyboard);
-    dbgln("Keyboard::keyboard_enter: serial={}, surface={}, keys={}", serial, surface, keys->size / sizeof(u32));
+    dbgln_if(WAYLAND_KEYBOARD_DEBUG, "Keyboard::keyboard_enter: serial={}, surface={}, keys={}", serial, surface, keys->size / sizeof(u32));
 
     self.m_focused_surface = static_cast<Surface*>(wl_surface_get_user_data(surface));
 
@@ -71,7 +73,7 @@ void Keyboard::keyboard_leave(void* data, wl_keyboard* keyboard, u32 serial, wl_
 {
     auto& self = *static_cast<Keyboard*>(data);
     VERIFY(self.ptr() == keyboard);
-    dbgln("Keyboard::keyboard_leave: serial={}, surface={}", serial, surface);
+    dbgln_if(WAYLAND_KEYBOARD_DEBUG, "Keyboard::keyboard_leave: serial={}, surface={}", serial, surface);
 
     auto* left_surface = static_cast<Surface*>(wl_surface_get_user_data(surface));
     VERIFY(self.m_focused_surface == left_surface);
@@ -87,7 +89,7 @@ void Keyboard::keyboard_key(void* data, wl_keyboard* keyboard, u32 serial, u32 t
 {
     auto& self = *static_cast<Keyboard*>(data);
     VERIFY(self.ptr() == keyboard);
-    dbgln("Keyboard::keyboard_key: serial={}, time={}, key={}, state={}", serial, time, key, state);
+    dbgln_if(WAYLAND_KEYBOARD_DEBUG, "Keyboard::keyboard_key: serial={}, time={}, key={}, state={}", serial, time, key, state);
 
     auto key_state = to_keystate(static_cast<wl_keyboard_key_state>(state));
     auto xkb_keycode = key + 8; // XKB keycodes are offset by 8 from raw edev keycodes from Compositor
@@ -105,7 +107,7 @@ void Keyboard::keyboard_modifiers(void* data, wl_keyboard* keyboard, u32 serial,
 {
     auto& self = *static_cast<Keyboard*>(data);
     VERIFY(self.ptr() == keyboard);
-    dbgln("Keyboard::keyboard_modifiers: serial={}, mods_depressed={}, mods_latched={}, mods_locked={}, group={}", serial, mods_depressed, mods_latched, mods_locked, group);
+    dbgln_if(WAYLAND_KEYBOARD_DEBUG, "Keyboard::keyboard_modifiers: serial={}, mods_depressed={}, mods_latched={}, mods_locked={}, group={}", serial, mods_depressed, mods_latched, mods_locked, group);
 
     xkb_state_update_mask(self.m_state, mods_depressed, mods_latched, mods_locked, 0, 0, group);
 }
@@ -114,7 +116,7 @@ void Keyboard::keyboard_repeat_info(void* data, wl_keyboard* keyboard, i32 rate,
 {
     auto& self = *static_cast<Keyboard*>(data);
     VERIFY(self.ptr() == keyboard);
-    dbgln("Keyboard::keyboard_repeat_info: rate={}, delay={}", rate, delay);
+    dbgln_if(WAYLAND_KEYBOARD_DEBUG, "Keyboard::keyboard_repeat_info: rate={}, delay={}", rate, delay);
 }
 
 const wl_keyboard_listener Keyboard::s_keyboard_listener

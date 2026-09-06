@@ -6,7 +6,9 @@
 
 #include <Loom/Wayland/Application.h>
 #include <Loom/Wayland/Button.h>
+#include <LibCore/EventLoop.h>
 #include <LibWayland/Buffer.h>
+#include <LibWayland/Callback.h>
 #include <LibWayland/Shm.h>
 #include <LibWayland/ShmPool.h>
 #include <LibWayland/Surface.h>
@@ -210,8 +212,7 @@ Gfx::Bitmap* WindowFrame::shadow_bitmap() const
         // FIXME: Support shadow for themes with border radius
         if (Application::the().palette().window_border_radius() > 0)
             return nullptr;
-        // FIXME: handle is_active to return active or inactive shadow
-        return s_active_window_shadow;
+        return m_window.is_active() ? s_active_window_shadow : s_inactive_window_shadow;
     }
 }
 
@@ -224,67 +225,125 @@ Gfx::IntRect WindowFrame::leftmost_titlebar_button_rect() const
     return rect;
 }
 
-void WindowFrame::window_content_changed(Badge<Window>)
+void WindowFrame::content_rect_changed(Badge<Window>)
 {
-    // FIXME: Do less work by keeping old data structures around
+    m_content_snapshot_bitmap = nullptr;
+    m_pending_present = false;
+}
 
-    auto window_content_bitmap = m_window.content();
-    VERIFY(window_content_bitmap);
+void WindowFrame::invalidate_decorations(Badge<Window>)
+{
+    m_pending_present = true;
+    present_if_possible();
+}
 
-    auto window_content_rect = m_window.content_rect();
-    auto& xdg_surface = m_window.xdg_surface();
+void WindowFrame::surface_configured(Badge<Window>)
+{
+    present_if_possible();
+}
 
-    if (m_window.is_frameless()) {
-        // Directly use the Window content bitmap as the surface buffer
+void WindowFrame::content_paint_finished(Badge<Window>, Vector<Gfx::IntRect> const&)
+{
+    auto content_bitmap = m_window.content();
+    VERIFY(content_bitmap);
 
-        auto size = window_content_bitmap->size();
-        auto pitch = static_cast<int>(window_content_bitmap->pitch());
-        auto format = window_content_bitmap->format();
-
-        auto shm_pool = m_shm.create_pool(window_content_bitmap->anonymous_buffer());
-        auto shm_buffer = shm_pool->create_buffer(size, pitch, format);
-
-        xdg_surface.set_window_geometry(window_content_rect);
-        xdg_surface.surface().attach(move(shm_buffer), window_content_rect.x(), window_content_rect.y());
-        xdg_surface.surface().commit();
-        return;
+    auto const content_size = m_window.content_rect().size();
+    auto const content_pitch = content_size.width() * 4;
+    if (!m_content_snapshot_bitmap || m_content_snapshot_bitmap->size() != content_size) {
+        auto buffer = MUST(Core::AnonymousBuffer::create_with_size(content_pitch * content_size.height()));
+        m_content_snapshot_bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(Gfx::BitmapFormat::BGRA8888, move(buffer), content_size, 1));
     }
 
+    Gfx::Painter painter(*m_content_snapshot_bitmap);
+    painter.blit({ 0, 0 }, *content_bitmap, { {}, content_size });
+
+    m_pending_present = true;
+    present_if_possible();
+}
+
+void WindowFrame::paint_frame(Gfx::Bitmap& render_bitmap)
+{
+    auto window_content_rect = m_window.content_rect();
     auto frame_rect = this->frame_rect();
     auto frame_rect_with_shadow = inflated_for_shadow(frame_rect);
-    auto window_geometry_rect = Gfx::IntRect { frame_rect.location() - frame_rect_with_shadow.location(), frame_rect.size() };
-
     auto render_size = frame_rect_with_shadow.size();
-    auto render_pitch = render_size.width() * 4;
-    auto render_format = Gfx::BitmapFormat::BGRA8888;
+    VERIFY(render_bitmap.size() == render_size);
 
-    m_render_buffer = MUST(Core::AnonymousBuffer::create_with_size(render_pitch * render_size.height()));
-    m_render_bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(render_format, m_render_buffer, render_size, 1));
-
-    // FIXME: use a real paint() call
     auto palette = Application::the().palette();
-    Gfx::Painter painter(*m_render_bitmap);
-    Gfx::IntPoint const content_origin = -frame_rect.location();
+    Gfx::Painter painter(render_bitmap);
 
     painter.clear_rect({ {}, frame_rect_with_shadow.size() }, Color::Transparent);
 
-    if (auto* shadow = shadow_bitmap()) {
-        Gfx::IntRect const shadow_rect = { {}, frame_rect_with_shadow.size() };
-        Gfx::StylePainter::paint_simple_rect_shadow(painter, shadow_rect, *shadow);
-        auto const offset = shadow->height() / 2;
-        painter.translate(offset, offset);
+    if (!m_window.is_frameless()) {
+        Gfx::IntPoint decoration_origin = -frame_rect.location();
+        if (auto* shadow = shadow_bitmap()) {
+            Gfx::IntRect const shadow_rect = { {}, frame_rect_with_shadow.size() };
+            Gfx::StylePainter::paint_simple_rect_shadow(painter, shadow_rect, *shadow);
+            auto const offset = shadow->height() / 2;
+            painter.translate(offset, offset);
+        }
+        Gfx::IntRect const adjusted_content_rect = { decoration_origin, window_content_rect.size() };
+        auto window_state = m_window.is_active() ? Gfx::WindowTheme::WindowState::Active : Gfx::WindowTheme::WindowState::Inactive;
+        current_window_theme().paint_normal_frame(painter, window_state, to_theme_window_mode(m_window.mode()), adjusted_content_rect, m_window.title(), m_window.icon(), palette, leftmost_titlebar_button_rect(), 0, false);
     }
-    Gfx::IntRect const adjusted_content_rect = { content_origin, window_content_rect.size() };
-    current_window_theme().paint_normal_frame(painter, Gfx::WindowTheme::WindowState::Active, to_theme_window_mode(m_window.mode()), adjusted_content_rect, m_window.title(), m_window.icon(), palette, leftmost_titlebar_button_rect(), 0, false);
 
-    painter.blit(content_origin, *window_content_bitmap, { {}, window_content_rect.size() });
+    auto const content_origin = -frame_rect.location();
+    painter.blit(content_origin, *m_content_snapshot_bitmap, { {}, window_content_rect.size() });
+}
 
-    auto shm_pool = m_shm.create_pool(m_render_buffer);
-    auto shm_buffer = shm_pool->create_buffer(render_size, render_pitch, render_format);
+void WindowFrame::discard_released_buffers()
+{
+    for (size_t i = m_submitted_buffers.size(); i > 0; --i) {
+        if (m_submitted_buffers[i - 1]->released)
+            m_submitted_buffers.remove(i - 1);
+    }
+}
 
+void WindowFrame::present_if_possible()
+{
+    discard_released_buffers();
+
+    if (!m_pending_present || !m_content_snapshot_bitmap || !m_window.is_configured())
+        return;
+
+    if (m_frame_callback) {
+        if (!m_frame_callback->done()) {
+            return;
+        }
+        m_frame_callback = nullptr;
+    }
+
+    auto const frame_rect = this->frame_rect();
+    auto const frame_rect_with_shadow = inflated_for_shadow(frame_rect);
+    auto const render_size = frame_rect_with_shadow.size();
+    auto const pitch = render_size.width() * 4;
+    auto memory = MUST(Core::AnonymousBuffer::create_with_size(pitch * render_size.height()));
+    auto bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(Gfx::BitmapFormat::BGRA8888, move(memory), render_size, 1));
+    auto shm_pool = m_shm.create_pool(bitmap->anonymous_buffer());
+    auto buffer = shm_pool->create_buffer(render_size, pitch, Gfx::BitmapFormat::BGRA8888);
+    auto output_buffer = make<OutputBuffer>(OutputBuffer { move(bitmap), move(buffer) });
+    auto* output_buffer_ptr = output_buffer.ptr();
+    output_buffer->buffer->on_release = [output_buffer_ptr] {
+        output_buffer_ptr->released = true;
+    };
+
+    paint_frame(*output_buffer->bitmap);
+
+    auto window_geometry_rect = Gfx::IntRect { frame_rect.location() - frame_rect_with_shadow.location(), frame_rect.size() };
+    auto& xdg_surface = m_window.xdg_surface();
     xdg_surface.set_window_geometry(window_geometry_rect);
-    xdg_surface.surface().attach(move(shm_buffer), 0, 0);
+    xdg_surface.surface().attach(*output_buffer->buffer, 0, 0);
+    xdg_surface.surface().damage_buffer({ {}, render_size });
+    m_frame_callback = xdg_surface.surface().frame();
+    m_frame_callback->promise().when_resolved([this] {
+        Core::deferred_invoke([this] {
+            m_frame_callback = nullptr;
+            present_if_possible();
+        });
+    });
+    m_submitted_buffers.append(move(output_buffer));
     xdg_surface.surface().commit();
+    m_pending_present = false;
 }
 
 }

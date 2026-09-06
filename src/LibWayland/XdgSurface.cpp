@@ -17,12 +17,13 @@ namespace Wayland {
 
 static void xdg_surface_configure(void* data, xdg_surface* xdg_surface, uint32_t serial)
 {
-    auto const& surface = *static_cast<XdgSurface*>(data);
+    auto& surface = *static_cast<XdgSurface*>(data);
     VERIFY(surface.ptr() == xdg_surface);
     dbgln_if(XDG_SURFACE_DEBUG, "XdgSurface::xdg_surface_configure: serial={}", serial);
     if (surface.on_configure)
-        surface.on_configure();
-    xdg_surface_ack_configure(xdg_surface, serial);
+        surface.on_configure(serial);
+    else
+        surface.ack_configure(serial);
 }
 
 static constexpr xdg_surface_listener s_surface_listener {
@@ -55,7 +56,16 @@ NonnullOwnPtr<XdgPopup> XdgSurface::get_xdg_popup(NonnullOwnPtr<XdgSurface> xdg_
 void XdgSurface::set_window_geometry(Gfx::IntRect const& rect)
 {
     dbgln_if(XDG_SURFACE_DEBUG, "XdgSurface::set_window_geometry: rect={}", rect);
+    if (m_window_geometry == rect)
+        return;
+
     xdg_surface_set_window_geometry(m_xdg_surface, rect.x(), rect.y(), rect.width(), rect.height());
+    m_window_geometry = rect;
+}
+
+void XdgSurface::ack_configure(u32 serial)
+{
+    xdg_surface_ack_configure(m_xdg_surface, serial);
 }
 
 }

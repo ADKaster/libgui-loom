@@ -9,6 +9,7 @@
 #include <AK/Function.h>
 #include <AK/Noncopyable.h>
 #include <AK/NonnullOwnPtr.h>
+#include <AK/Optional.h>
 #include <AK/Platform.h>
 #include <LibWayland/Forward.h>
 #include <LibWayland/Interface.h>
@@ -34,11 +35,13 @@ public:
     static NonnullOwnPtr<XdgPopup> get_xdg_popup(NonnullOwnPtr<XdgSurface>, XdgSurface* parent, NonnullOwnPtr<XdgPositioner>);
     void set_window_geometry(Gfx::IntRect const& rect);
 
-    Function<void()> on_configure;
+    Function<void(u32)> on_configure;
+    void ack_configure(u32 serial);
 
 private:
     NonnullOwnPtr<Surface> m_surface;
     xdg_surface* m_xdg_surface;
+    Optional<Gfx::IntRect> m_window_geometry;
 };
 
 }
