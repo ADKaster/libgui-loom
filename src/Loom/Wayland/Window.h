@@ -17,6 +17,8 @@
 
 namespace Loom {
 
+class Cursor;
+
 class Window {
     AK_MAKE_NONCOPYABLE(Window);
     AK_MAKE_NONMOVABLE(Window);
@@ -76,6 +78,9 @@ public:
     void set_icon(NonnullRefPtr<Gfx::Bitmap>);
     void set_default_icon();
 
+    [[nodiscard]] RefPtr<Cursor const> cursor() const;
+    void set_cursor(RefPtr<Cursor const>);
+
     [[nodiscard]] Gfx::IntRect content_rect() const { return m_content_rect; }
     [[nodiscard]] RefPtr<Gfx::Bitmap> content() const { return m_content_backing_store; }
     [[nodiscard]] RefPtr<Gfx::Bitmap> last_content_backing_store() const { return m_last_content_backing_store; }
@@ -87,6 +92,7 @@ public:
 
     [[nodiscard]] Wayland::XdgSurface& xdg_surface() const;
     [[nodiscard]] WindowServerConnectionProxy& client() const { return m_client; }
+    [[nodiscard]] WindowFrame& frame() { return m_frame; }
 
 private:
     Window(WindowServerConnectionProxy&, NonnullOwnPtr<Wayland::XdgToplevel>, Wayland::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
@@ -120,6 +126,8 @@ private:
     i32 m_last_content_backing_store_serial { -1 };
 
     // FIXME: Handle parent/child relationships
+
+    RefPtr<Cursor const> m_cursor;
 };
 
 }

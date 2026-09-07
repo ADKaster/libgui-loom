@@ -3,6 +3,8 @@ add_executable(Loom
     main.cpp
     Application.cpp
     Button.cpp
+    Conversions.cpp
+    Cursor.cpp
     ScreenLayout.cpp
     SeatDelegate.cpp
     Window.cpp

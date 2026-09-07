@@ -16,6 +16,8 @@
 #include <LibGfx/SystemTheme.h>
 #include <Loom/IPCBridge.h>
 #include <Loom/Wayland/Application.h>
+#include <Loom/Wayland/Conversions.h>
+#include <Loom/Wayland/Cursor.h>
 #include <Loom/Wayland/SeatDelegate.h>
 #include <Loom/Wayland/WindowFrame.h>
 #include <LibWayland/Callback.h>
@@ -146,9 +148,7 @@ static NonnullRefPtr<Gfx::PaletteImpl> initialize_libgfx_globals(StringView them
 {
     auto theme_path = ByteString::formatted("resource://themes/{}.ini", theme_name);
     auto theme_config = MUST(Core::ConfigFile::open(theme_path));
-    auto color_scheme_path = theme_config->read_entry("Paths", "ColorScheme", "resource://color-schemes/Default.ini");
-    if (color_scheme_path.starts_with("/res/"sv))
-        color_scheme_path = ByteString::formatted("resource://{}", color_scheme_path.substring_view(5));
+    auto color_scheme_path = to_resource_path(theme_config->read_entry("Paths", "ColorScheme", "resource://color-schemes/Default.ini"));
 
     auto theme = MUST(Gfx::load_system_theme(theme_path, color_scheme_path));
     Gfx::set_system_theme(theme);
@@ -169,11 +169,13 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
 {
     StringView display_name;
     StringView system_theme = "Default"sv;
+    StringView cursor_theme = "Default"sv;
 
     Core::ArgsParser parser;
     parser.set_general_help("Loom compositor bridge service");
     parser.add_option(display_name, "Wayland display name", "display", 'd', "name");
     parser.add_option(system_theme, "System theme to use", "theme", 't', "name");
+    parser.add_option(cursor_theme, "Cursor theme to use", "cursor-theme", 'c', "name");
 
     if (!parser.parse(arguments, Core::ArgsParser::FailureBehavior::PrintUsage))
         return Error::from_string_literal("Failed to parse arguments");
@@ -200,6 +202,8 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
     registry.seat().set_pointer_delegate(m_seat_delegate);
     registry.seat().set_keyboard_delegate(m_seat_delegate);
 
+    TRY(load_cursor_theme(cursor_theme));
+
     m_ipc_bridge = IPCBridge::create();
 
     register_dbus_handlers();
@@ -223,6 +227,50 @@ SeatDelegate& Application::seat_delegate()
 StringView Application::app_id() const
 {
     return "org.serenityos.Loom"sv;
+}
+
+ErrorOr<void> Application::load_cursor_theme(StringView theme_name)
+{
+    // FIXME: Handle non-1 scale factor for cursor bitmaps.
+    //        Perhaps by storing multiple bitmaps and pulling the right one based on Surface preferred scale
+    auto scale_factor = 1;
+
+    auto theme_config_uri = ByteString::formatted("resource://cursor-themes/{}/Config.ini", theme_name);
+    auto theme_config_or_error = Core::ConfigFile::open(theme_config_uri);
+    if (theme_config_or_error.is_error()) {
+        dbgln("Unable to open cursor theme '{}': {}", theme_config_uri, theme_config_or_error.error());
+        return Error::from_string_literal("Unable to open cursor theme");
+    }
+    auto theme_config = theme_config_or_error.release_value();
+
+    auto load_cursor = [&](RefPtr<Cursor const>& cursor, StringView name) {
+        static auto const s_default_cursor_path = "resource://cursor-themes/Default/arrow.x2y2.png"sv;
+        cursor = Cursor::create(ByteString::formatted("resource://cursor-themes/{}/{}", theme_name, theme_config->read_entry("Cursor", name)), s_default_cursor_path, scale_factor);
+        if (!cursor)
+            dbgln("Failed to load cursor {} from theme {}", name, theme_name);
+    };
+
+    load_cursor(m_hidden_cursor, "Hidden"sv);
+    load_cursor(m_arrow_cursor, "Arrow"sv);
+    load_cursor(m_hand_cursor, "Hand"sv);
+    load_cursor(m_help_cursor, "Help"sv);
+    load_cursor(m_resize_horizontally_cursor, "ResizeH"sv);
+    load_cursor(m_resize_vertically_cursor, "ResizeV"sv);
+    load_cursor(m_resize_diagonally_tlbr_cursor, "ResizeDTLBR"sv);
+    load_cursor(m_resize_diagonally_bltr_cursor, "ResizeDBLTR"sv);
+    load_cursor(m_resize_column_cursor, "ResizeColumn"sv);
+    load_cursor(m_resize_row_cursor, "ResizeRow"sv);
+    load_cursor(m_i_beam_cursor, "IBeam"sv);
+    load_cursor(m_disallowed_cursor, "Disallowed"sv);
+    load_cursor(m_move_cursor, "Move"sv);
+    load_cursor(m_drag_cursor, "Drag"sv);
+    load_cursor(m_drag_copy_cursor, "DragCopy"sv);
+    load_cursor(m_wait_cursor, "Wait"sv);
+    load_cursor(m_crosshair_cursor, "Crosshair"sv);
+    load_cursor(m_eyedropper_cursor, "Eyedropper"sv);
+    load_cursor(m_zoom_cursor, "Zoom"sv);
+
+    return {};
 }
 
 }

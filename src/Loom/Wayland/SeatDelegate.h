@@ -30,6 +30,10 @@ private:
     Window* get_window(Wayland::Surface*);
 
     HashMap<Wayland::Surface*, Window*> m_surface_owners;
+
+    u32 m_key_modifiers { 0 }; // FIXME: Why does WindowServer send *keyboard* modifiers in MouseEvents :v
+    u32 m_mouse_buttons { 0 };
+    Gfx::IntPoint m_pointer_position { 0, 0 };
 };
 
 }

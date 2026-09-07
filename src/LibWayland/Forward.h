@@ -23,6 +23,8 @@ class Seat;
 class Shm;
 class ShmPool;
 class Surface;
+class Viewport;
+class Viewporter;
 class XdgPopup;
 class XdgPositioner;
 class XdgSurface;

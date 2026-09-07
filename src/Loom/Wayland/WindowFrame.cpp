@@ -13,6 +13,7 @@
 #include <LibWayland/ShmPool.h>
 #include <LibWayland/Surface.h>
 #include <LibWayland/XdgSurface.h>
+#include <Loom/Wayland/Conversions.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowFrame.h>
 #include <LibGfx/Painter.h>
@@ -39,13 +40,6 @@ static Gfx::WindowTheme& current_window_theme()
 {
     auto const& app = Application::the();
     return app.palette().window_theme();
-}
-
-static ByteString to_resource_path(StringView path)
-{
-    if (path.starts_with("/res/"sv))
-        return path.replace("/res/"sv, "resource://"sv, ReplaceMode::FirstOnly);
-    return path;
 }
 
 static RefPtr<Gfx::Bitmap> load_bitmap(StringView path, StringView name, StringView default_path)

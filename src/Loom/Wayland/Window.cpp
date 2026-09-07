@@ -12,10 +12,9 @@
 #include <LibWayland/XdgToplevel.h>
 #include <LibWayland/XdgWmBase.h>
 #include <Loom/Wayland/Application.h>
+#include <Loom/Wayland/Cursor.h>
+#include <Loom/Wayland/SeatDelegate.h>
 #include <Loom/Wayland/Window.h>
-
-#include "SeatDelegate.h"
-
 #include <Loom/Wayland/WindowFrame.h>
 
 namespace Loom {
@@ -175,6 +174,16 @@ void Window::set_icon(NonnullRefPtr<Gfx::Bitmap> icon)
 {
     m_icon = move(icon);
     m_frame.invalidate_decorations({});
+}
+
+RefPtr<Cursor const> Window::cursor() const
+{
+    return m_cursor;
+}
+
+void Window::set_cursor(RefPtr<Cursor const> cursor)
+{
+    m_cursor = move(cursor);
 }
 
 void Window::set_active(bool active)

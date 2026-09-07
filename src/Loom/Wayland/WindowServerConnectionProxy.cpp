@@ -491,15 +491,34 @@ void WindowServerConnectionProxy::show_screen_numbers(bool show)
 void WindowServerConnectionProxy::set_window_cursor(i32 window_id, i32 cursor_type)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_cursor(window_id={}, cursor_type={})", window_id, cursor_type);
-    (void)window_id;
-    (void)cursor_type;
+    auto it = m_impl->windows.find(window_id);
+    if (it == m_impl->windows.end()) {
+        did_misbehave("SetWindowCursor: Bad window ID");
+        return;
+    }
+    auto& window = *(*it).value;
+    if (cursor_type < 0 || cursor_type >= to_underlying(Gfx::StandardCursor::__Count)) {
+        did_misbehave("SetWindowCursor: Bad cursor type");
+        return;
+    }
+    window.set_cursor(Cursor::create(static_cast<Gfx::StandardCursor>(cursor_type)));
 }
 
 void WindowServerConnectionProxy::set_window_custom_cursor(i32 window_id, Gfx::ShareableBitmap const& cursor)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: set_window_custom_cursor(window_id={})", window_id);
-    (void)window_id;
-    (void)cursor;
+    auto window_it = m_impl->windows.find(window_id);
+    if (window_it == m_impl->windows.end()) {
+        did_misbehave("SetWindowCustomCursor: Bad window ID");
+        return;
+    }
+    auto& window = (*window_it).value;
+
+    if (!cursor.is_valid()) {
+        did_misbehave("SetWindowCustomCursor: Bad cursor");
+        return;
+    }
+    window->set_cursor(Cursor::create(*cursor.bitmap()));
 }
 
 void WindowServerConnectionProxy::popup_menu(i32 menu_id, Gfx::IntPoint screen_position, Gfx::IntRect const& button_rect)

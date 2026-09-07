@@ -28,6 +28,7 @@ public:
     [[nodiscard]] Seat& seat() const { return *m_seat; }
     [[nodiscard]] Shm& shm() const { return *m_shm; }
     [[nodiscard]] Fixes& fixes() const { return *m_fixes; }
+    [[nodiscard]] Viewporter& viewporter() const { return *m_viewporter; }
     [[nodiscard]] XdgWmBase& wm_base() const { return *m_xdg_wm_base; }
     [[nodiscard]] ReadonlySpan<NonnullOwnPtr<Output>> outputs() const { return m_outputs.span(); }
 
@@ -47,6 +48,7 @@ private:
     OwnPtr<Compositor> m_compositor;
     OwnPtr<Seat> m_seat;
     OwnPtr<Shm> m_shm;
+    OwnPtr<Viewporter> m_viewporter;
     OwnPtr<XdgWmBase> m_xdg_wm_base;
 
     Vector<NonnullOwnPtr<Output>, 2> m_outputs;

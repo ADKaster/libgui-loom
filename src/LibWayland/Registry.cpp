@@ -10,6 +10,7 @@
 #include <LibWayland/Registry.h>
 #include <LibWayland/Seat.h>
 #include <LibWayland/Shm.h>
+#include <LibWayland/Viewporter.h>
 #include <LibWayland/XdgWmBase.h>
 
 namespace Wayland {
@@ -59,6 +60,8 @@ void Registry::global_callback(void* data, wl_registry* registry, u32 name, cons
         that->m_shm = that->bind<Shm>(name, version);
     } else if (interface == Output::interface_name) {
         that->m_outputs.append(that->bind<Output>(name, version, name).release_nonnull());
+    } else if (interface == Viewporter::interface_name) {
+        that->m_viewporter = that->bind<Viewporter>(name, version);
     } else {
         dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Unknown interface: {}, version {}, name {}", interface, version, name);
     }

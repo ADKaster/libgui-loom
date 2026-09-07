@@ -8,6 +8,8 @@
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowServerConnectionProxy.h>
 #include <Kernel/API/KeyCode.h>
+#include <LibGUI/Event.h>
+#include <LibWayland/Pointer.h>
 #include <xkbcommon/xkbcommon.h>
 
 namespace Loom {
@@ -268,6 +270,25 @@ static KeyModifier translate_key_modifiers(Wayland::KeyboardModifier modifiers)
     return key_modifiers;
 }
 
+static GUI::MouseButton translate_mouse_button(Wayland::RawMouseButton button)
+{
+    // FIXME: Query OS about whether the primary/secondary mouse buttons are swapped, and return the correct button here.
+    switch (button) {
+    case Wayland::RawMouseButton::Left:
+        return GUI::MouseButton::Primary;
+    case Wayland::RawMouseButton::Right:
+        return GUI::MouseButton::Secondary;
+    case Wayland::RawMouseButton::Middle:
+        return GUI::MouseButton::Middle;
+    case Wayland::RawMouseButton::Backward:
+        return GUI::MouseButton::Backward;
+    case Wayland::RawMouseButton::Forward:
+        return GUI::MouseButton::Forward;
+    default:
+        return GUI::MouseButton::None;
+    }
+}
+
 void SeatDelegate::register_surface_owner(Wayland::Surface& surface, Window& window)
 {
     m_surface_owners.set(&surface, &window);
@@ -290,7 +311,8 @@ Window* SeatDelegate::get_window(Wayland::Surface* surface)
 
 SeatDelegate::SeatDelegate()
 {
-    on_pointer_enter = [this](Wayland::Pointer&, Wayland::Surface* surface, u32, Gfx::IntPoint) {
+    on_pointer_enter = [this](Wayland::Pointer&, Wayland::Surface* surface, u32, Gfx::IntPoint position) {
+        m_pointer_position = position;
         if (auto* window = get_window(surface))
             window->client().async_window_entered(window->window_id());
     };
@@ -300,7 +322,37 @@ SeatDelegate::SeatDelegate()
             window->client().async_window_left(window->window_id());
     };
 
-    // FIXME: Pointer move, button, axis
+    on_pointer_button = [this](Wayland::Pointer&, Wayland::Surface* surface, u32, Duration, Wayland::RawMouseButton button, Wayland::MouseButtonState button_state) {
+        auto* window = get_window(surface);
+        if (!window)
+            return;
+
+        auto gui_button = translate_mouse_button(button);
+
+        if (button_state == Wayland::MouseButtonState::Pressed)
+            m_mouse_buttons |= to_underlying(gui_button);
+        else if (button_state == Wayland::MouseButtonState::Released)
+            m_mouse_buttons &= ~to_underlying(gui_button);
+
+        if (button_state == Wayland::MouseButtonState::Pressed)
+            window->client().async_mouse_down(window->window_id(), m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers, 0, 0, 0, 0);
+        else if (button_state == Wayland::MouseButtonState::Released)
+            window->client().async_mouse_up(window->window_id(), m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers, 0, 0, 0, 0);
+    };
+
+    on_pointer_motion = [this](Wayland::Pointer&, Wayland::Surface* surface, Duration, Gfx::IntPoint position) {
+        auto* window = get_window(surface);
+        if (!window)
+            return;
+
+        m_pointer_position = position;
+
+        window->client().async_mouse_move(window->window_id(), m_pointer_position, GUI::MouseButton::None, m_mouse_buttons, m_key_modifiers, 0, 0, 0, 0);
+    };
+
+    on_pointer_axis = [](Wayland::Pointer&) {
+      // FIXME: Do the scroll dance
+    };
 
     on_keyboard_enter = [](Wayland::Keyboard&, Wayland::Surface*, u32) {
         // No-op
