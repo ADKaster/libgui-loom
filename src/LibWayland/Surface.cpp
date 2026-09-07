@@ -9,6 +9,7 @@
 #include <LibWayland/Buffer.h>
 #include <LibWayland/Callback.h>
 #include <LibWayland/Output.h>
+#include <LibWayland/Region.h>
 #include <LibWayland/Surface.h>
 #include <LibGfx/Rect.h>
 
@@ -104,6 +105,11 @@ NonnullOwnPtr<Callback> Surface::frame()
 void Surface::commit()
 {
     wl_surface_commit(m_surface);
+}
+
+void Surface::set_input_region(Region* region)
+{
+    wl_surface_set_input_region(m_surface, region ? region->ptr() : nullptr);
 }
 
 }

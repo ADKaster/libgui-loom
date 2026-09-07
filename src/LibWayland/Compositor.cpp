@@ -6,6 +6,7 @@
 
 #include <AK/Assertions.h>
 #include <LibWayland/Compositor.h>
+#include <LibWayland/Region.h>
 #include <LibWayland/Surface.h>
 
 namespace Wayland {
@@ -25,6 +26,11 @@ Compositor::~Compositor()
 NonnullOwnPtr<Surface> Compositor::create_surface()
 {
     return make<Surface>(wl_compositor_create_surface(m_compositor), m_version);
+}
+
+NonnullOwnPtr<Region> Compositor::create_region()
+{
+    return make<Region>(wl_compositor_create_region(m_compositor));
 }
 
 }

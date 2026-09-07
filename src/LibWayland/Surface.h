@@ -38,6 +38,7 @@ public:
     void attach(Buffer&, i32 x, i32 y);
     void damage(Gfx::IntRect const&);
     void damage_buffer(Gfx::IntRect const&);
+    void set_input_region(Region*);
     NonnullOwnPtr<Callback> frame();
     void commit();
 

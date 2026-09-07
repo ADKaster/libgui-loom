@@ -19,6 +19,7 @@ class Output;
 class Pointer;
 struct PointerDelegate;
 class Registry;
+class Region;
 class Seat;
 class Shm;
 class ShmPool;

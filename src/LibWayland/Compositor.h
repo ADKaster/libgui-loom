@@ -27,6 +27,7 @@ public:
     RETURNS_NONNULL [[nodiscard]] wl_compositor* ptr() const { return m_compositor; }
 
     NonnullOwnPtr<Surface> create_surface();
+    NonnullOwnPtr<Region> create_region();
 
 private:
     wl_compositor* m_compositor;

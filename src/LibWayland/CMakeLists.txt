@@ -50,15 +50,16 @@ endfunction()
 
 lagom_lib(LibWayland wayland
     SOURCES
-        Display.cpp
-        Callback.cpp
-        Registry.cpp
         Buffer.cpp
+        Callback.cpp
         Compositor.cpp
+        Display.cpp
         Fixes.cpp
         Keyboard.cpp
         Output.cpp
         Pointer.cpp
+        Registry.cpp
+        Region.cpp
         Seat.cpp
         Shm.cpp
         ShmPool.cpp
