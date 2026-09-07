@@ -25,9 +25,12 @@ void Fixes::destroy_registry(Registry& registry)
     wl_fixes_destroy_registry(m_fixes, registry.ptr());
 }
 
-void Fixes::ack_global_remove(Registry& registry, u32 name)
+void Fixes::ack_global_remove([[maybe_unused]] Registry& registry, [[maybe_unused]] u32 name)
 {
-    wl_fixes_ack_global_remove(m_fixes, registry.ptr(), name);
+#if defined(WL_FIXES_ACK_GLOBAL_REMOVE)
+    if (wl_fixes_get_version(m_fixes) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
+        wl_fixes_ack_global_remove(m_fixes, registry.ptr(), name);
+#endif
 }
 
 }

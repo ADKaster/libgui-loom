@@ -77,7 +77,7 @@ void Registry::global_removed_callback(void* data, wl_registry* registry, u32 na
         dbgln_if(WAYLAND_REGISTRY_DEBUG, "Registry: Output removed: {}", name);
     }
 
-    if (that->m_fixes && that->m_fixes->version() >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION)
+    if (that->m_fixes)
         that->m_fixes->ack_global_remove(*that, name);
 }
 
