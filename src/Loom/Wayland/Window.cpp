@@ -27,9 +27,9 @@ static Gfx::Bitmap const& default_window_icon()
     return *s_icon;
 }
 
-Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgToplevel> toplevel, Wayland::Shm& shm, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
+Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgToplevel> toplevel, Wayland::Registry& registry, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
     : m_client(client)
-    , m_frame(*this, shm)
+    , m_frame(*this, registry)
     , m_toplevel(move(toplevel))
     , m_type(type)
     , m_mode(mode)
@@ -88,7 +88,6 @@ Window::~Window()
 NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Wayland::Display& display, WindowServer::WindowType window_type, WindowServer::WindowMode window_mode, i32 window_id, i32 process_id, WindowFlags flags, Window* parent_window)
 {
     auto& registry = display.registry();
-    auto& shm = registry.shm();
 
     auto surface = registry.compositor().create_surface();
     auto xdg_surface = registry.wm_base().get_xdg_surface(move(surface));
@@ -98,7 +97,7 @@ NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Waylan
 
     (void)parent_window;
 
-    return adopt_own(*new Window(client, move(xdg_toplevel), shm, window_type, window_mode, window_id, process_id, flags));
+    return adopt_own(*new Window(client, move(xdg_toplevel), registry, window_type, window_mode, window_id, process_id, flags));
 }
 
 void Window::set_title(ByteString const& title)

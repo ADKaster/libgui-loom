@@ -95,7 +95,7 @@ public:
     [[nodiscard]] WindowFrame& frame() { return m_frame; }
 
 private:
-    Window(WindowServerConnectionProxy&, NonnullOwnPtr<Wayland::XdgToplevel>, Wayland::Shm&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
+    Window(WindowServerConnectionProxy&, NonnullOwnPtr<Wayland::XdgToplevel>, Wayland::Registry&, WindowServer::WindowType, WindowServer::WindowMode, i32 window_id, i32 process_id, WindowFlags);
 
     void request_paint_if_needed();
 

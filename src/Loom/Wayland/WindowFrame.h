@@ -23,7 +23,7 @@ class WindowFrame {
     AK_MAKE_NONMOVABLE(WindowFrame);
 public:
 
-    WindowFrame(Window& window, Wayland::Shm& shm);
+    WindowFrame(Window& window, Wayland::Registry& registry);
     ~WindowFrame();
 
     static void load_theme_config();
@@ -59,7 +59,7 @@ private:
     void present_if_possible();
 
     Window& m_window;
-    Wayland::Shm& m_shm;
+    Wayland::Registry& m_registry;
 
     RefPtr<Gfx::Bitmap> m_content_snapshot_bitmap;
     Vector<NonnullOwnPtr<OutputBuffer>> m_submitted_buffers;

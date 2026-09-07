@@ -9,6 +9,9 @@
 #include <LibCore/EventLoop.h>
 #include <LibWayland/Buffer.h>
 #include <LibWayland/Callback.h>
+#include <LibWayland/Compositor.h>
+#include <LibWayland/Registry.h>
+#include <LibWayland/Region.h>
 #include <LibWayland/Shm.h>
 #include <LibWayland/ShmPool.h>
 #include <LibWayland/Surface.h>
@@ -19,8 +22,8 @@
 #include <LibGfx/Painter.h>
 #include <LibGfx/WindowTheme.h>
 #include <WindowServer/SystemEffects.h>
-#include <WindowServer/WindowType.h>
 #include <WindowServer/WindowMode.h>
+#include <WindowServer/WindowType.h>
 
 namespace Loom {
 
@@ -122,9 +125,9 @@ void WindowFrame::load_theme_config()
     s_tooltip_shadow = load_shadow(to_resource_path(palette.tooltip_shadow_path()));
 }
 
-WindowFrame::WindowFrame(Window& window, Wayland::Shm& shm)
+WindowFrame::WindowFrame(Window& window, Wayland::Registry& registry)
     : m_window(window)
-    , m_shm(shm)
+    , m_registry(registry)
 {
 }
 
@@ -307,13 +310,16 @@ void WindowFrame::present_if_possible()
         m_frame_callback = nullptr;
     }
 
+    auto& shm = m_registry.shm();
+    auto& compositor = m_registry.compositor();
+
     auto const frame_rect = this->frame_rect();
     auto const frame_rect_with_shadow = inflated_for_shadow(frame_rect);
     auto const render_size = frame_rect_with_shadow.size();
     auto const pitch = render_size.width() * 4;
     auto memory = MUST(Core::AnonymousBuffer::create_with_size(pitch * render_size.height()));
     auto bitmap = MUST(Gfx::Bitmap::create_with_anonymous_buffer(Gfx::BitmapFormat::BGRA8888, move(memory), render_size, 1));
-    auto shm_pool = m_shm.create_pool(bitmap->anonymous_buffer());
+    auto shm_pool = shm.create_pool(bitmap->anonymous_buffer());
     auto buffer = shm_pool->create_buffer(render_size, pitch, Gfx::BitmapFormat::BGRA8888);
     auto output_buffer = make<OutputBuffer>(OutputBuffer { move(bitmap), move(buffer) });
     auto* output_buffer_ptr = output_buffer.ptr();
@@ -324,19 +330,27 @@ void WindowFrame::present_if_possible()
     paint_frame(*output_buffer->bitmap);
 
     auto window_geometry_rect = Gfx::IntRect { frame_rect.location() - frame_rect_with_shadow.location(), frame_rect.size() };
+    auto input_region = compositor.create_region();
+    input_region->add(window_geometry_rect);
+
     auto& xdg_surface = m_window.xdg_surface();
     xdg_surface.set_window_geometry(window_geometry_rect);
-    xdg_surface.surface().attach(*output_buffer->buffer, 0, 0);
-    xdg_surface.surface().damage_buffer({ {}, render_size });
-    m_frame_callback = xdg_surface.surface().frame();
+
+    auto& surface = xdg_surface.surface();
+    surface.set_input_region(input_region);
+    surface.attach(*output_buffer->buffer, 0, 0);
+    surface.damage_buffer({ {}, render_size });
+
+    m_frame_callback = surface.frame();
     m_frame_callback->promise().when_resolved([this] {
         Core::deferred_invoke([this] {
             m_frame_callback = nullptr;
             present_if_possible();
         });
     });
+
     m_submitted_buffers.append(move(output_buffer));
-    xdg_surface.surface().commit();
+    surface.commit();
     m_pending_present = false;
 }
 
