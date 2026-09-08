@@ -20,7 +20,7 @@ namespace Loom {
 class Cursor : public RefCounted<Cursor> {
 public:
     static RefPtr<Cursor const> create(StringView, StringView, int);
-    static NonnullRefPtr<Cursor const> create(NonnullRefPtr<Gfx::Bitmap const>&&, Optional<Gfx::CursorParams> = {});
+    static NonnullRefPtr<Cursor const> create(NonnullRefPtr<Gfx::Bitmap>&&, Optional<Gfx::CursorParams> = {});
     static RefPtr<Cursor const> create(Gfx::StandardCursor);
 
     ~Cursor();

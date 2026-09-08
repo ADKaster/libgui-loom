@@ -51,17 +51,23 @@ static RefPtr<Gfx::Bitmap> load_bitmap(StringView path, StringView name, StringV
     full_path.append(path);
     full_path.append(name);
 
-    auto bitmap_or_error = Gfx::Bitmap::load_from_uri(full_path.string_view());
-    if (!bitmap_or_error.is_error())
-        return bitmap_or_error.release_value();
+    RefPtr<Gfx::Bitmap> bitmap;
 
-    if (!default_path.is_empty()) {
-        auto default_bitmap_or_error = Gfx::Bitmap::load_from_uri(default_path);
-        if (!default_bitmap_or_error.is_error())
-            return default_bitmap_or_error.release_value();
+    auto bitmap_or_error = Gfx::Bitmap::load_from_uri(full_path.string_view());
+    if (!bitmap_or_error.is_error()) {
+        bitmap = bitmap_or_error.release_value();
     }
 
-    return {};
+    if (!bitmap && !default_path.is_empty()) {
+        auto default_bitmap_or_error = Gfx::Bitmap::load_from_uri(default_path);
+        if (!default_bitmap_or_error.is_error())
+            bitmap = default_bitmap_or_error.release_value();
+    }
+
+    if (bitmap)
+        premultiply_alpha_channel(*bitmap);
+
+    return bitmap;
 }
 
 static void load_icon(Button::Icon& icon, StringView icons_path, StringView name, StringView default_path = ""sv)
@@ -76,8 +82,11 @@ static RefPtr<Gfx::Bitmap> load_shadow(StringView path)
         return nullptr;
 
     auto bitmap_or_error = Gfx::Bitmap::load_from_uri(path);
-    if (!bitmap_or_error.is_error())
-        return bitmap_or_error.release_value();
+    if (!bitmap_or_error.is_error()) {
+        auto bitmap = bitmap_or_error.release_value();
+        premultiply_alpha_channel(*bitmap);
+        return bitmap;
+    }
 
     return nullptr;
 }
@@ -364,7 +373,8 @@ HitTestResult WindowFrame::hit_test(Gfx::IntPoint const& surface_position) const
 
     // It *should* be the case that the compositor will never deliver a mouse event to a position inside the shadow.
     // We ensure this via setting the input region on the wl_surface to the window geometry rect, which does not include the shadow.
-    VERIFY(frame_rect.contains(content_relative_position));
+    if (!frame_rect.contains(content_relative_position))
+        dbgln("WindowFrame: hit_test: surface_position={} is outside of frame_rect_with_shadow={} (content_relative_position={})", surface_position, frame_rect_with_shadow, content_relative_position);
 
     bool const is_frame_hit = !m_window.content_rect().contains(content_relative_position);
 

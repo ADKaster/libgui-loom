@@ -17,6 +17,7 @@
 #include <LibWayland/Viewport.h>
 #include <LibWayland/Viewporter.h>
 #include <Loom/Wayland/Application.h>
+#include <Loom/Wayland/Conversions.h>
 #include <Loom/Wayland/Cursor.h>
 
 namespace Loom {
@@ -57,12 +58,14 @@ void Cursor::set_frame(i32 frame)
     m_viewport->set_source(source_rect);
 }
 
-NonnullRefPtr<Cursor const> Cursor::create(NonnullRefPtr<Gfx::Bitmap const>&& bitmap, Optional<Gfx::CursorParams> cursor_params)
+NonnullRefPtr<Cursor const> Cursor::create(NonnullRefPtr<Gfx::Bitmap>&& bitmap, Optional<Gfx::CursorParams> cursor_params)
 {
     if (!cursor_params.has_value()) {
         auto const hotspot = bitmap->rect().center();
         cursor_params = Gfx::CursorParams(hotspot);
     }
+
+    premultiply_alpha_channel(*bitmap);
 
     auto& registry = Application::the().display().registry();
     auto& compositor = registry.compositor();
@@ -80,7 +83,7 @@ NonnullRefPtr<Cursor const> Cursor::create(NonnullRefPtr<Gfx::Bitmap const>&& bi
 
 RefPtr<Cursor const> Cursor::create(StringView uri, StringView default_uri, int scale_factor)
 {
-    auto load_bitmap = [scale_factor](StringView path) -> RefPtr<Gfx::Bitmap const> {
+    auto load_bitmap = [scale_factor](StringView path) -> RefPtr<Gfx::Bitmap> {
         auto bitmap_or_error = Gfx::Bitmap::load_from_uri(path, scale_factor);
         if (bitmap_or_error.is_error())
             return {};
@@ -93,9 +96,9 @@ RefPtr<Cursor const> Cursor::create(StringView uri, StringView default_uri, int 
     }
 
     if (bitmap) {
-        auto shared = Gfx::ShareableBitmap { bitmap->to_shareable_bitmap() };
+        bitmap = MUST(bitmap->to_bitmap_backed_by_anonymous_buffer());
         auto cursor_params = Gfx::CursorParams::parse_from_filename(uri, bitmap->rect().center()).constrained(*bitmap);
-        return create(*shared.bitmap(), cursor_params);
+        return create(*bitmap, cursor_params);
     }
     return {};
 }
