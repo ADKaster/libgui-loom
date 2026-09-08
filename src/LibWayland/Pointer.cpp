@@ -157,9 +157,9 @@ Pointer::~Pointer()
     wl_pointer_release(m_pointer);
 }
 
-void Pointer::set_cursor(i32 serial, Surface& surface, Gfx::IntPoint hotspot)
+void Pointer::set_cursor(u32 serial, Surface* surface, Gfx::IntPoint hotspot)
 {
-    wl_pointer_set_cursor(m_pointer, serial, surface.ptr(), hotspot.x(), hotspot.y());
+    wl_pointer_set_cursor(m_pointer, serial, surface ? surface->ptr() : nullptr, hotspot.x(), hotspot.y());
 }
 
 static MouseButtonState to_mouse_button_state(Pointer::ButtonState state)

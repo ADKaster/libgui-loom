@@ -53,7 +53,7 @@ public:
     RETURNS_NONNULL [[nodiscard]] wl_pointer* ptr() const { return m_pointer; }
 
     void set_delegate(PointerDelegate* delegate) { m_delegate = delegate; }
-    void set_cursor(i32 serial, Surface& surface, Gfx::IntPoint hotspot);
+    void set_cursor(u32 serial, Surface* surface, Gfx::IntPoint hotspot);
 
 private:
 
