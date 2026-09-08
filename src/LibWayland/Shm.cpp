@@ -11,6 +11,8 @@
 
 namespace Wayland {
 
+#define SHM_FORMAT_DEBUG 0
+
 static StringView shm_format_to_string(u32 format)
 {
     switch (format) {
@@ -317,7 +319,7 @@ static StringView shm_format_to_string(u32 format)
 
 static const wl_shm_listener s_shm_listener = {
     .format = [](void*, wl_shm*, u32 format) {
-        dbgln("Shm::format: allowed format={:x} ({})", format, shm_format_to_string(format));
+        dbgln_if(SHM_FORMAT_DEBUG, "Shm::format: allowed format={:x} ({})", format, shm_format_to_string(format));
     },
 };
 
