@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <Loom/Wayland/Cursor.h>
+#include <Loom/Wayland/Events.h>
 #include <Loom/Wayland/SeatDelegate.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowServerConnectionProxy.h>
@@ -311,43 +313,54 @@ Window* SeatDelegate::get_window(Wayland::Surface* surface)
 
 SeatDelegate::SeatDelegate()
 {
-    on_pointer_enter = [this](Wayland::Pointer&, Wayland::Surface* surface, u32, Gfx::IntPoint position) {
+    on_pointer_enter = [this](Wayland::Pointer&, Wayland::Surface* surface, u32 serial, Gfx::IntPoint position) {
+        m_last_pointer_serial = serial;
         m_pointer_position = position;
         if (auto* window = get_window(surface))
             window->client().async_window_entered(window->window_id());
     };
 
-    on_pointer_leave = [this](Wayland::Pointer&, Wayland::Surface* surface, u32) {
+    on_pointer_leave = [this](Wayland::Pointer&, Wayland::Surface* surface, u32 serial) {
+        m_last_pointer_serial = serial;
         if (auto* window = get_window(surface))
             window->client().async_window_left(window->window_id());
     };
 
-    on_pointer_button = [this](Wayland::Pointer&, Wayland::Surface* surface, u32, Duration, Wayland::RawMouseButton button, Wayland::MouseButtonState button_state) {
+    on_pointer_button = [this](Wayland::Pointer& pointer, Wayland::Surface* surface, u32 serial, Duration, Wayland::RawMouseButton button, Wayland::MouseButtonState button_state) {
+        m_last_pointer_serial = serial;
         auto* window = get_window(surface);
         if (!window)
             return;
 
         auto gui_button = translate_mouse_button(button);
+        MouseEvent::Type type;
 
-        if (button_state == Wayland::MouseButtonState::Pressed)
+        if (button_state == Wayland::MouseButtonState::Pressed) {
             m_mouse_buttons |= to_underlying(gui_button);
-        else if (button_state == Wayland::MouseButtonState::Released)
+            type = MouseEvent::Type::MouseDown;
+        }
+        else {
+            VERIFY(button_state == Wayland::MouseButtonState::Released);
             m_mouse_buttons &= ~to_underlying(gui_button);
+            type = MouseEvent::Type::MouseUp;
+        }
 
-        if (button_state == Wayland::MouseButtonState::Pressed)
-            window->client().async_mouse_down(window->window_id(), m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers, 0, 0, 0, 0);
-        else if (button_state == Wayland::MouseButtonState::Released)
-            window->client().async_mouse_up(window->window_id(), m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers, 0, 0, 0, 0);
+        if (auto cursor = window->handle_mouse_event(MouseEvent(type, m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers)))
+            pointer.set_cursor(serial, &cursor->surface(), cursor->params().hotspot());
+        else
+            pointer.set_cursor(serial, nullptr, {});
     };
 
-    on_pointer_motion = [this](Wayland::Pointer&, Wayland::Surface* surface, Duration, Gfx::IntPoint position) {
+    on_pointer_motion = [this](Wayland::Pointer& pointer, Wayland::Surface* surface, Duration, Gfx::IntPoint position) {
+        m_pointer_position = position;
         auto* window = get_window(surface);
         if (!window)
             return;
 
-        m_pointer_position = position;
-
-        window->client().async_mouse_move(window->window_id(), m_pointer_position, GUI::MouseButton::None, m_mouse_buttons, m_key_modifiers, 0, 0, 0, 0);
+        if (auto cursor = window->handle_mouse_event(MouseEvent(MouseEvent::Type::MouseMove, m_pointer_position, GUI::MouseButton::None, m_mouse_buttons, m_key_modifiers)))
+            pointer.set_cursor(m_last_pointer_serial, &cursor->surface(), cursor->params().hotspot());
+        else
+            pointer.set_cursor(m_last_pointer_serial, nullptr, {});
     };
 
     on_pointer_axis = [](Wayland::Pointer&) {

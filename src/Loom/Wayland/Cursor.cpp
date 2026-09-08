@@ -49,7 +49,7 @@ void Cursor::update_rect_if_animated()
 
 void Cursor::set_frame(i32 frame)
 {
-    VERIFY(frame > 0 && frame < static_cast<i32>(m_params.frames()));
+    VERIFY(frame >= 0 && frame < static_cast<i32>(m_params.frames()));
 
     auto source_rect = m_rect.translated(frame * m_rect.width(), 0);
 

@@ -17,6 +17,7 @@
 #include <LibWayland/Surface.h>
 #include <LibWayland/XdgSurface.h>
 #include <Loom/Wayland/Conversions.h>
+#include <Loom/Wayland/Cursor.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowFrame.h>
 #include <LibGfx/Painter.h>
@@ -26,7 +27,6 @@
 #include <WindowServer/WindowType.h>
 
 namespace Loom {
-
 static Button::Icon s_minimize_icon;
 static Button::Icon s_maximize_icon;
 static Button::Icon s_restore_icon;
@@ -61,7 +61,6 @@ static RefPtr<Gfx::Bitmap> load_bitmap(StringView path, StringView name, StringV
             return default_bitmap_or_error.release_value();
     }
 
-    dbgln("Failed to load bitmap from {} or default path {}", full_path.string_view(), default_path);
     return {};
 }
 
@@ -352,6 +351,37 @@ void WindowFrame::present_if_possible()
     m_submitted_buffers.append(move(output_buffer));
     surface.commit();
     m_pending_present = false;
+}
+
+HitTestResult WindowFrame::hit_test(Gfx::IntPoint const& surface_position) const
+{
+    VERIFY(!m_window.is_frameless());
+
+    auto const frame_rect = this->frame_rect();
+    auto const frame_rect_with_shadow = inflated_for_shadow(frame_rect);
+
+    auto const content_relative_position = surface_position.translated(frame_rect_with_shadow.location());
+
+    // It *should* be the case that the compositor will never deliver a mouse event to a position inside the shadow.
+    // We ensure this via setting the input region on the wl_surface to the window geometry rect, which does not include the shadow.
+    VERIFY(frame_rect.contains(content_relative_position));
+
+    bool const is_frame_hit = !m_window.content_rect().contains(content_relative_position);
+
+    return HitTestResult {
+        .surface_position = surface_position,
+        .content_relative_position = content_relative_position,
+        .is_frame_hit = is_frame_hit,
+    };
+}
+
+RefPtr<Cursor const> WindowFrame::handle_mouse_event(MouseEvent const&, HitTestResult const& hit_test_result)
+{
+    VERIFY(hit_test_result.is_frame_hit);
+
+    // FIXME: Handle mouse events on the titlebar, frame edges, buttons, menus, etc.
+
+    return Cursor::create(Gfx::StandardCursor::Arrow);
 }
 
 }

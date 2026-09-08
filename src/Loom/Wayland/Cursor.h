@@ -7,7 +7,9 @@
 
 #pragma once
 
-#include <AK/HashMap.h>
+#include <AK/NonnullOwnPtr.h>
+#include <AK/RefCounted.h>
+#include <AK/RefPtr.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/CursorParams.h>
 #include <LibGfx/StandardCursor.h>

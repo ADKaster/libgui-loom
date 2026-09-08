@@ -10,6 +10,7 @@
 #include <AK/NonnullOwnPtr.h>
 #include <LibGfx/Rect.h>
 #include <LibWayland/Forward.h>
+#include <Loom/Wayland/Events.h>
 #include <Loom/Wayland/WindowFrame.h>
 #include <Loom/WindowServerConnectionProxy.h>
 #include <WindowServer/WindowMode.h>
@@ -80,6 +81,8 @@ public:
 
     [[nodiscard]] RefPtr<Cursor const> cursor() const;
     void set_cursor(RefPtr<Cursor const>);
+
+    RefPtr<Cursor const> handle_mouse_event(MouseEvent const&);
 
     [[nodiscard]] Gfx::IntRect content_rect() const { return m_content_rect; }
     [[nodiscard]] RefPtr<Gfx::Bitmap> content() const { return m_content_backing_store; }

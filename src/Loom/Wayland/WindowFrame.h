@@ -13,9 +13,11 @@
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Rect.h>
 #include <LibWayland/Forward.h>
+#include <Loom/Wayland/Events.h>
 
 namespace Loom {
 
+class Cursor;
 class Window;
 
 class WindowFrame {
@@ -32,6 +34,9 @@ public:
     void content_rect_changed(Badge<Window>);
     void invalidate_decorations(Badge<Window>);
     void surface_configured(Badge<Window>);
+
+    [[nodiscard]] HitTestResult hit_test(Gfx::IntPoint const& surface_position) const;
+    [[nodiscard]] RefPtr<Cursor const> handle_mouse_event(MouseEvent const&, HitTestResult const&);
 
     [[nodiscard]] Window& window() const { return m_window; }
 

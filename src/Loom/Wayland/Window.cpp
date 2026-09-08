@@ -37,6 +37,7 @@ Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgTo
     , m_process_id(process_id)
     , m_flags(flags)
     , m_icon(default_window_icon())
+    , m_cursor(Cursor::create(Gfx::StandardCursor::Arrow))
 {
     m_toplevel->on_configure = [this](i32 width, i32 height, Span<u32> states) {
         if (width > 0 && height > 0)
@@ -211,6 +212,49 @@ void Window::set_modified(bool modified)
 Wayland::XdgSurface& Window::xdg_surface() const
 {
     return m_toplevel->surface();
+}
+
+static void send_window_mouse_event(Window& window, Gfx::IntPoint const& content_relative_position, MouseEvent const& event)
+{
+    auto& client = window.client();
+    auto window_id = window.window_id();
+
+    switch (event.type()) {
+    case MouseEvent::Type::MouseMove:
+        client.async_mouse_move(window_id, content_relative_position, event.button(), event.buttons(), event.keyboard_modifiers(), 0, 0, 0, 0);
+        break;
+    case MouseEvent::Type::MouseDown:
+        client.async_mouse_down(window_id, content_relative_position, event.button(), event.buttons(), event.keyboard_modifiers(), 0, 0, 0, 0);
+        break;
+    case MouseEvent::Type::MouseUp:
+        client.async_mouse_up(window_id, content_relative_position, event.button(), event.buttons(), event.keyboard_modifiers(), 0, 0, 0, 0);
+        break;
+    case MouseEvent::Type::MouseWheel:
+        client.async_mouse_wheel(window_id, content_relative_position, event.button(), event.buttons(), event.keyboard_modifiers(), 0, 0, 0, 0);
+        break;
+    default:
+        VERIFY_NOT_REACHED();
+    }
+}
+
+RefPtr<Cursor const> Window::handle_mouse_event(MouseEvent const& event)
+{
+    if (is_frameless()) {
+        // In frameless mode, surface coordinates == window coordinates
+        if (!m_content_rect.contains(event.surface_position()))
+            return nullptr; // This is actually strange. Drag? Frozen pointer?
+
+        send_window_mouse_event(*this, event.surface_position(), event);
+        return m_cursor;
+    }
+
+    HitTestResult hit_test_result = m_frame.hit_test(event.surface_position());
+
+    if (hit_test_result.is_frame_hit)
+        return m_frame.handle_mouse_event(event, hit_test_result);
+
+    send_window_mouse_event(*this, hit_test_result.content_relative_position, event);
+    return m_cursor;
 }
 
 }
