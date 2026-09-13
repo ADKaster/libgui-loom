@@ -44,13 +44,18 @@ Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgTo
             m_pending_toplevel_size = Gfx::IntSize { width, height };
 
         bool active = false;
+        bool maximized = false;
         for (auto state : states) {
             // FIXME: handle other states
             if (state == XDG_TOPLEVEL_STATE_ACTIVATED) {
                 active = true;
             }
+            else if (state == XDG_TOPLEVEL_STATE_MAXIMIZED) {
+                maximized = true;
+            }
         }
         this->set_active(active);
+        this->set_maximized(maximized);
     };
 
     m_toplevel->surface().on_configure = [this](u32 serial) {
@@ -75,10 +80,12 @@ Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgTo
     };
 
     m_toplevel->on_close = [this] {
-        m_client.async_window_close_request(m_window_id);
+        this->close();
     };
 
     Application::the().seat_delegate().register_surface_owner(m_toplevel->surface().surface(), *this);
+
+    m_frame.window_was_constructed({});
 }
 
 Window::~Window()
@@ -101,6 +108,11 @@ NonnullOwnPtr<Window> Window::create(WindowServerConnectionProxy& client, Waylan
     return adopt_own(*new Window(client, move(xdg_toplevel), registry, window_type, window_mode, window_id, process_id, flags));
 }
 
+void Window::close()
+{
+    m_client.async_window_close_request(m_window_id);
+}
+
 void Window::set_title(ByteString const& title)
 {
     if (title == m_title)
@@ -108,7 +120,7 @@ void Window::set_title(ByteString const& title)
 
     m_title = title;
     m_toplevel->set_title(title);
-    m_frame.invalidate_decorations({});
+    m_frame.invalidate_decorations();
 }
 
 void Window::set_content_rect(Gfx::IntRect rect)
@@ -167,13 +179,13 @@ void Window::did_finish_painting(Vector<Gfx::IntRect> const& rects)
 void Window::set_default_icon()
 {
     m_icon = default_window_icon();
-    m_frame.invalidate_decorations({});
+    m_frame.invalidate_decorations();
 }
 
 void Window::set_icon(NonnullRefPtr<Gfx::Bitmap> icon)
 {
     m_icon = move(icon);
-    m_frame.invalidate_decorations({});
+    m_frame.invalidate_decorations();
 }
 
 RefPtr<Cursor const> Window::cursor() const
@@ -197,7 +209,7 @@ void Window::set_active(bool active)
     else
         m_client.async_window_deactivated(m_window_id);
 
-    m_frame.invalidate_decorations({});
+    m_frame.invalidate_decorations();
 }
 
 void Window::set_modified(bool modified)
@@ -206,7 +218,41 @@ void Window::set_modified(bool modified)
         return;
 
     m_modified = modified;
-    m_frame.invalidate_decorations({});
+    m_frame.invalidate_decorations();
+}
+
+void Window::set_maximized(bool maximized)
+{
+    if (m_maximized == maximized)
+        return;
+
+    m_maximized = maximized;
+
+    // FIXME: Do a bunch of stuff like:
+    //   send resize event
+    //   send move event
+    //   update window menu items
+
+    m_frame.invalidate_decorations();
+}
+
+void Window::maximize_or_restore()
+{
+    set_maximized(!m_maximized);
+}
+
+void Window::minimize()
+{
+    if (!is_minimizable())
+        return;
+
+    // FIXME: Do more things, like
+    //   notify client
+    //   update window menu items
+
+    m_toplevel->set_minimized();
+
+    m_frame.invalidate_decorations();
 }
 
 Wayland::XdgSurface& Window::xdg_surface() const
@@ -241,14 +287,14 @@ RefPtr<Cursor const> Window::handle_mouse_event(MouseEvent const& event)
 {
     if (is_frameless()) {
         // In frameless mode, surface coordinates == window coordinates
-        if (!m_content_rect.contains(event.surface_position()))
+        if (!m_content_rect.contains(event.position()))
             return nullptr; // This is actually strange. Drag? Frozen pointer?
 
-        send_window_mouse_event(*this, event.surface_position(), event);
+        send_window_mouse_event(*this, event.position(), event);
         return m_cursor;
     }
 
-    HitTestResult hit_test_result = m_frame.hit_test(event.surface_position());
+    HitTestResult hit_test_result = m_frame.hit_test(event.position());
 
     if (hit_test_result.is_frame_hit)
         return m_frame.handle_mouse_event(event, hit_test_result);

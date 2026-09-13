@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/WeakPtr.h>
 #include <AK/HashMap.h>
 #include <AK/Noncopyable.h>
 #include <LibWayland/KeyboardDelegate.h>
@@ -13,6 +14,7 @@
 
 namespace Loom {
 
+class Button;
 class Window;
 
 class SeatDelegate : public Wayland::KeyboardDelegate, public Wayland::PointerDelegate {
@@ -25,6 +27,11 @@ public:
     void register_surface_owner(Wayland::Surface&, Window&);
     void unregister_surface_owner(Wayland::Surface&);
 
+    void set_cursor_tracking_button(Button*);
+    void set_hovered_button(Button*);
+    WeakPtr<Button> cursor_tracking_button();
+    WeakPtr<Button> hovered_button();
+
 private:
 
     Window* get_window(Wayland::Surface*);
@@ -35,6 +42,9 @@ private:
     u32 m_mouse_buttons { 0 };
     u32 m_last_pointer_serial { 0 };
     Gfx::IntPoint m_pointer_position { 0, 0 };
+
+    WeakPtr<Button> m_cursor_tracking_button;
+    WeakPtr<Button> m_hovered_button;
 };
 
 }

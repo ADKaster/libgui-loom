@@ -12,11 +12,13 @@
 #include <AK/Vector.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Rect.h>
+#include <LibGfx/WindowTheme.h>
 #include <LibWayland/Forward.h>
 #include <Loom/Wayland/Events.h>
 
 namespace Loom {
 
+class Button;
 class Cursor;
 class Window;
 
@@ -30,13 +32,18 @@ public:
 
     static void load_theme_config();
 
+    // Perform initialization activities that require a fully constructed Window
+    void window_was_constructed(Badge<Window>);
+
     void content_paint_finished(Badge<Window>, Vector<Gfx::IntRect> const& damaged_rects);
     void content_rect_changed(Badge<Window>);
-    void invalidate_decorations(Badge<Window>);
     void surface_configured(Badge<Window>);
+    void invalidate_decorations();
 
     [[nodiscard]] HitTestResult hit_test(Gfx::IntPoint const& surface_position) const;
     [[nodiscard]] RefPtr<Cursor const> handle_mouse_event(MouseEvent const&, HitTestResult const&);
+    [[nodiscard]] RefPtr<Cursor const> handle_titlebar_mouse_event(MouseEvent const&);
+    [[nodiscard]] RefPtr<Cursor const> handle_menubar_mouse_event(MouseEvent const&);
 
     [[nodiscard]] Window& window() const { return m_window; }
 
@@ -47,8 +54,11 @@ public:
 
     [[nodiscard]] Gfx::IntRect frame_rect() const;
     [[nodiscard]] Gfx::IntRect inflated_for_shadow(Gfx::IntRect const& frame_rect) const;
+    [[nodiscard]] Gfx::IntRect render_rect() const;
 
     [[nodiscard]] Gfx::IntRect leftmost_titlebar_button_rect() const;
+
+    [[nodiscard]] Gfx::WindowTheme::WindowState window_state_for_theme() const;
 
 private:
 
@@ -62,9 +72,16 @@ private:
     void paint_frame(Gfx::Bitmap&);
     void discard_released_buffers();
     void present_if_possible();
+    void layout_buttons();
+    void set_button_icons();
 
     Window& m_window;
     Wayland::Registry& m_registry;
+
+    Vector<NonnullOwnPtr<Button>> m_buttons;
+    Button* m_close_button { nullptr };
+    Button* m_maximize_button { nullptr };
+    Button* m_minimize_button { nullptr };
 
     RefPtr<Gfx::Bitmap> m_content_snapshot_bitmap;
     Vector<NonnullOwnPtr<OutputBuffer>> m_submitted_buffers;

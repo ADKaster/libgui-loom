@@ -29,9 +29,9 @@ public:
         MouseWheel = 3,
     };
 
-    MouseEvent(Type type, Gfx::IntPoint surface_position, u32 button, u32 buttons, u32 keyboard_modifiers)
+    MouseEvent(Type type, Gfx::IntPoint position, u32 button, u32 buttons, u32 keyboard_modifiers)
         : m_type(type)
-        , m_surface_position(surface_position)
+        , m_position(position)
         , m_button(button)
         , m_buttons(buttons)
         , m_keyboard_modifiers(keyboard_modifiers)
@@ -39,14 +39,21 @@ public:
     }
 
     [[nodiscard]] Type type() const { return m_type; }
-    [[nodiscard]] Gfx::IntPoint surface_position() const { return m_surface_position; }
+    [[nodiscard]] Gfx::IntPoint position() const { return m_position; }
     [[nodiscard]] u32 button() const { return m_button; }
     [[nodiscard]] u32 buttons() const { return m_buttons; }
     [[nodiscard]] u32 keyboard_modifiers() const { return m_keyboard_modifiers; }
 
+    [[nodiscard]] MouseEvent translated(Gfx::IntPoint delta) const
+    {
+        MouseEvent event = *this;
+        event.m_position = m_position.translated(delta);
+        return event;
+    }
+
 private:
     Type m_type;
-    Gfx::IntPoint m_surface_position;
+    Gfx::IntPoint m_position;
     u32 m_button { 0 };
     u32 m_buttons { 0};
     u32 m_keyboard_modifiers { 0 };

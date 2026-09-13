@@ -49,6 +49,9 @@ public:
     void set_content_rect(Gfx::IntRect);
     void invalidate(Vector<Gfx::IntRect> const&);
     void did_finish_painting(Vector<Gfx::IntRect> const&);
+    void maximize_or_restore();
+    void minimize();
+    void close();
 
     [[nodiscard]] WindowServer::WindowType type() const { return m_type; }
     [[nodiscard]] WindowServer::WindowMode mode() const { return m_mode; }
@@ -63,9 +66,11 @@ public:
     [[nodiscard]] bool has_forced_shadow() const { return m_flags.forced_shadow; }
     [[nodiscard]] bool is_active() const { return m_flags.active; }
     [[nodiscard]] bool is_modified() const { return m_modified; }
+    [[nodiscard]] bool is_maximized() const { return m_maximized; }
 
     void set_active(bool);
     void set_modified(bool);
+    void set_maximized(bool);
 
     [[nodiscard]] bool is_modal() const { return m_mode != WindowServer::WindowMode::Modeless; }
     [[nodiscard]] bool is_passive() const { return m_mode == WindowServer::WindowMode::Passive; }
@@ -113,6 +118,7 @@ private:
 
     WindowFlags m_flags;
     bool m_modified { false };
+    bool m_maximized { false };
 
     ByteString m_title;
     NonnullRefPtr<Gfx::Bitmap const> m_icon;

@@ -85,4 +85,9 @@ void XdgToplevel::set_app_id(ByteString const& app_id)
     xdg_toplevel_set_app_id(m_xdg_toplevel, app_id.characters());
 }
 
+void XdgToplevel::set_minimized()
+{
+    xdg_toplevel_set_minimized(m_xdg_toplevel);
+}
+
 }

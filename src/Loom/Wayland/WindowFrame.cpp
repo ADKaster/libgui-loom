@@ -139,6 +139,35 @@ WindowFrame::WindowFrame(Window& window, Wayland::Registry& registry)
 {
 }
 
+void WindowFrame::window_was_constructed(Badge<Window>)
+{
+    if (m_window.is_closeable()) {
+        auto close_button = make<Button>(*this, [this] {
+            m_window.close();
+        });
+        m_close_button = close_button.ptr();
+        m_buttons.append(move(close_button));
+    }
+
+    if (m_window.is_resizable()) {
+        auto maximize_button = make<Button>(*this, [this] {
+            m_window.maximize_or_restore();
+        });
+        m_maximize_button = maximize_button.ptr();
+        m_buttons.append(move(maximize_button));
+    }
+
+    if (m_window.is_minimizable()) {
+        auto minimize_button = make<Button>(*this, [this] {
+            m_window.minimize();
+        });
+        m_minimize_button = minimize_button.ptr();
+        m_buttons.append(move(minimize_button));
+    }
+
+    set_button_icons();
+}
+
 WindowFrame::~WindowFrame() = default;
 
 Gfx::IntRect WindowFrame::menubar_rect() const
@@ -179,6 +208,12 @@ Gfx::IntRect WindowFrame::inflated_for_shadow(Gfx::IntRect const& frame_rect) co
     }
 
     return frame_rect;
+}
+
+Gfx::IntRect WindowFrame::render_rect() const
+{
+    auto const frame_rect = this->frame_rect();
+    return inflated_for_shadow(frame_rect);
 }
 
 Gfx::Bitmap* WindowFrame::shadow_bitmap() const
@@ -223,20 +258,62 @@ Gfx::Bitmap* WindowFrame::shadow_bitmap() const
 
 Gfx::IntRect WindowFrame::leftmost_titlebar_button_rect() const
 {
-    // FIXME: Actually compute the leftmost titlebar button rect
+    if (!m_buttons.is_empty())
+        return m_buttons.last()->relative_rect();
 
     auto rect = titlebar_rect();
     rect.translate_by(rect.width(), 0);
     return rect;
 }
 
+Gfx::WindowTheme::WindowState WindowFrame::window_state_for_theme() const
+{
+    return m_window.is_active() ? Gfx::WindowTheme::WindowState::Active : Gfx::WindowTheme::WindowState::Inactive;
+}
+
+void WindowFrame::layout_buttons()
+{
+    auto button_rects = current_window_theme().layout_buttons(to_theme_window_type(m_window.type()), to_theme_window_mode(m_window.mode()), m_window.content_rect(), Application::the().palette(), m_buttons.size(), m_window.is_maximized());
+    for (size_t i = 0; i < m_buttons.size(); i++) {
+        m_buttons[i]->set_relative_rect(button_rects[i]);
+        m_buttons[i]->set_surface_rect(button_rects[i].translated(render_rect().location()));
+    }
+}
+
+void WindowFrame::set_button_icons()
+{
+    invalidate_decorations();
+
+    if (m_window.is_frameless())
+        return;
+
+    auto button_style = Application::the().palette().title_buttons_icon_only()
+        ? Button::Style::IconOnly
+        : Button::Style::Normal;
+
+    if (m_window.is_closeable()) {
+        m_close_button->set_icon(m_window.is_modified() ? s_close_modified_icon : s_close_icon);
+        m_close_button->set_style(button_style);
+    }
+    if (m_window.is_minimizable() && !m_window.is_modal()) {
+        m_minimize_button->set_icon(s_minimize_icon);
+        m_minimize_button->set_style(button_style);
+    }
+    if (m_window.is_resizable()) {
+        m_maximize_button->set_icon(m_window.is_maximized() ? s_restore_icon : s_maximize_icon);
+        m_maximize_button->set_style(button_style);
+    }
+}
+
 void WindowFrame::content_rect_changed(Badge<Window>)
 {
     m_content_snapshot_bitmap = nullptr;
     m_pending_present = false;
+
+    layout_buttons();
 }
 
-void WindowFrame::invalidate_decorations(Badge<Window>)
+void WindowFrame::invalidate_decorations()
 {
     m_pending_present = true;
     present_if_possible();
@@ -288,8 +365,11 @@ void WindowFrame::paint_frame(Gfx::Bitmap& render_bitmap)
             painter.translate(offset, offset);
         }
         Gfx::IntRect const adjusted_content_rect = { decoration_origin, window_content_rect.size() };
-        auto window_state = m_window.is_active() ? Gfx::WindowTheme::WindowState::Active : Gfx::WindowTheme::WindowState::Inactive;
-        current_window_theme().paint_normal_frame(painter, window_state, to_theme_window_mode(m_window.mode()), adjusted_content_rect, m_window.title(), m_window.icon(), palette, leftmost_titlebar_button_rect(), 0, false);
+        current_window_theme().paint_normal_frame(painter, window_state_for_theme(), to_theme_window_mode(m_window.mode()), adjusted_content_rect, m_window.title(), m_window.icon(), palette, leftmost_titlebar_button_rect(), 0, false);
+
+        for (auto& button : m_buttons) {
+            button->paint(painter);
+        }
     }
 
     auto const content_origin = -frame_rect.location();
@@ -385,12 +465,62 @@ HitTestResult WindowFrame::hit_test(Gfx::IntPoint const& surface_position) const
     };
 }
 
-RefPtr<Cursor const> WindowFrame::handle_mouse_event(MouseEvent const&, HitTestResult const& hit_test_result)
+RefPtr<Cursor const> WindowFrame::handle_mouse_event(MouseEvent const& event, HitTestResult const& hit_test_result)
 {
     VERIFY(hit_test_result.is_frame_hit);
+    VERIFY(!m_window.is_fullscreen());
 
-    // FIXME: Handle mouse events on the titlebar, frame edges, buttons, menus, etc.
+    auto adjusted_event = event.translated(inflated_for_shadow(frame_rect()).location());
 
+    if (m_window.type() != WindowServer::WindowType::Normal && m_window.type() != WindowServer::WindowType::Notification)
+        return Cursor::create(Gfx::StandardCursor::Arrow);;
+
+    // FIXME: Ignore windows with a blocking modal window
+
+    // This is slightly hackish, but expand the title bar rect by two pixels downwards,
+    // so that mouse events between the title bar and window contents don't act like
+    // mouse events on the border.
+    auto adjusted_titlebar_rect = titlebar_rect();
+    adjusted_titlebar_rect.set_height(adjusted_titlebar_rect.height() + 2);
+
+    if (adjusted_titlebar_rect.contains(hit_test_result.content_relative_position))
+        return handle_titlebar_mouse_event(adjusted_event);
+
+    if (menubar_rect().contains(hit_test_result.content_relative_position))
+        return handle_menubar_mouse_event(adjusted_event);
+
+    // FIXME: Handle resize on frame edges
+    // Cursor:
+    //   if DragNDrop -> DragNDrop cursor or DragNDrop accept cursor
+    //   if moving -> Move cursor
+    //   if resizing OR hovering over frame edges -> pick Resize cursor
+    //   else Arrow cursor
+
+    return Cursor::create(Gfx::StandardCursor::Arrow);
+}
+
+RefPtr<Cursor const> WindowFrame::handle_titlebar_mouse_event(MouseEvent const& event)
+{
+    auto arrow_cursor = Cursor::create(Gfx::StandardCursor::Arrow);
+
+    if (titlebar_icon_rect().contains(event.position())) {
+        // FIXME: This is supposed to pop up a menu over the titlebar icon, but we don't have menus yet,
+        //        so just return the arrow cursor for now.
+        return arrow_cursor;
+    }
+
+    for (auto& button : m_buttons) {
+        if (button->relative_rect().contains(event.position())) {
+            button->handle_mouse_event(event.translated(-button->relative_rect().location()));
+            return arrow_cursor;
+        }
+    }
+
+    return arrow_cursor;
+}
+
+RefPtr<Cursor const> WindowFrame::handle_menubar_mouse_event(MouseEvent const&)
+{
     return Cursor::create(Gfx::StandardCursor::Arrow);
 }
 

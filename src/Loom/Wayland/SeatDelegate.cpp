@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <Loom/Wayland/Button.h>
 #include <Loom/Wayland/Cursor.h>
 #include <Loom/Wayland/Events.h>
 #include <Loom/Wayland/SeatDelegate.h>
@@ -13,6 +14,7 @@
 #include <LibGUI/Event.h>
 #include <LibWayland/Pointer.h>
 #include <xkbcommon/xkbcommon.h>
+#include <limits.h>
 
 namespace Loom {
 
@@ -328,13 +330,10 @@ SeatDelegate::SeatDelegate()
 
     on_pointer_button = [this](Wayland::Pointer& pointer, Wayland::Surface* surface, u32 serial, Duration, Wayland::RawMouseButton button, Wayland::MouseButtonState button_state) {
         m_last_pointer_serial = serial;
-        auto* window = get_window(surface);
-        if (!window)
-            return;
 
         auto gui_button = translate_mouse_button(button);
-        MouseEvent::Type type;
 
+        MouseEvent::Type type;
         if (button_state == Wayland::MouseButtonState::Pressed) {
             m_mouse_buttons |= to_underlying(gui_button);
             type = MouseEvent::Type::MouseDown;
@@ -345,7 +344,24 @@ SeatDelegate::SeatDelegate()
             type = MouseEvent::Type::MouseUp;
         }
 
-        if (auto cursor = window->handle_mouse_event(MouseEvent(type, m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers)))
+        auto const event = MouseEvent(type, m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers);
+
+        auto* window = get_window(surface);
+
+        if (m_cursor_tracking_button) {
+            if (!window || m_cursor_tracking_button->window() != window) {
+                // Post a mouse event with a synthetic position to show "out of bounds"
+                m_cursor_tracking_button->handle_mouse_event(event.translated({ INT_MIN / 2, INT_MIN / 2 }));
+                m_cursor_tracking_button = nullptr;
+            } else {
+                m_cursor_tracking_button->handle_mouse_event(event.translated(-m_cursor_tracking_button->surface_rect().location()));
+            }
+        }
+
+        if (!window)
+            return;
+
+        if (auto cursor = window->handle_mouse_event(event))
             pointer.set_cursor(serial, &cursor->surface(), cursor->params().hotspot());
         else
             pointer.set_cursor(serial, nullptr, {});
@@ -353,11 +369,24 @@ SeatDelegate::SeatDelegate()
 
     on_pointer_motion = [this](Wayland::Pointer& pointer, Wayland::Surface* surface, Duration, Gfx::IntPoint position) {
         m_pointer_position = position;
+        auto const event = MouseEvent(MouseEvent::Type::MouseMove, m_pointer_position, GUI::MouseButton::None, m_mouse_buttons, m_key_modifiers);
+
         auto* window = get_window(surface);
+
+        if (m_hovered_button) {
+            if (!window || m_hovered_button->window() != window) {
+                // Post a mouse event with a synthetic position to show "out of bounds"
+                m_hovered_button->handle_mouse_event(event.translated({ INT_MIN / 2, INT_MIN / 2 }));
+                m_hovered_button = nullptr;
+            } else {
+                m_hovered_button->handle_mouse_event(event.translated(-m_hovered_button->surface_rect().location()));
+            }
+        }
+
         if (!window)
             return;
 
-        if (auto cursor = window->handle_mouse_event(MouseEvent(MouseEvent::Type::MouseMove, m_pointer_position, GUI::MouseButton::None, m_mouse_buttons, m_key_modifiers)))
+        if (auto cursor = window->handle_mouse_event(event))
             pointer.set_cursor(m_last_pointer_serial, &cursor->surface(), cursor->params().hotspot());
         else
             pointer.set_cursor(m_last_pointer_serial, nullptr, {});
@@ -388,6 +417,26 @@ SeatDelegate::SeatDelegate()
         else if (key_state == Wayland::KeyState::Released)
             window->client().async_key_up(window->window_id(), code_point, key_code, 0xFF, key_modifiers, raw_key);
     };
+}
+
+void SeatDelegate::set_cursor_tracking_button(Button* button)
+{
+    m_cursor_tracking_button = button;
+}
+
+void SeatDelegate::set_hovered_button(Button* button)
+{
+    m_hovered_button = button;
+}
+
+WeakPtr<Button> SeatDelegate::cursor_tracking_button()
+{
+    return m_cursor_tracking_button;
+}
+
+WeakPtr<Button> SeatDelegate::hovered_button()
+{
+    return m_hovered_button;
 }
 
 }
