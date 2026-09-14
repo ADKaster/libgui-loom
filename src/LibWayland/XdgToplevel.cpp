@@ -96,4 +96,9 @@ void XdgToplevel::move(Seat& seat, u32 serial)
     xdg_toplevel_move(m_xdg_toplevel, seat.ptr(), serial);
 }
 
+void XdgToplevel::resize(Seat& seat, u32 serial, ResizeEdge edge)
+{
+    xdg_toplevel_resize(m_xdg_toplevel, seat.ptr(), serial, to_underlying(edge));
+}
+
 }
