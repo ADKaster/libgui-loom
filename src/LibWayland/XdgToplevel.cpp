@@ -9,8 +9,9 @@
 #include <AK/Vector.h>
 #include <LibWayland/XdgToplevel.h>
 #include <LibWayland/XdgSurface.h>
+#include <LibWayland/Seat.h>
 
-#define XDG_TOPLEVEL_DEBUG 1
+#define XDG_TOPLEVEL_DEBUG 0
 
 namespace Wayland {
 
@@ -63,7 +64,7 @@ static constexpr xdg_toplevel_listener s_toplevel_listener {
 };
 
 XdgToplevel::XdgToplevel(xdg_toplevel* xdg_toplevel, NonnullOwnPtr<XdgSurface> xdg_surface)
-    : m_xdg_surface(move(xdg_surface))
+    : m_xdg_surface(AK::move(xdg_surface))
     , m_xdg_toplevel(xdg_toplevel)
 {
     VERIFY(m_xdg_toplevel != nullptr);
@@ -88,6 +89,11 @@ void XdgToplevel::set_app_id(ByteString const& app_id)
 void XdgToplevel::set_minimized()
 {
     xdg_toplevel_set_minimized(m_xdg_toplevel);
+}
+
+void XdgToplevel::move(Seat& seat, u32 serial)
+{
+    xdg_toplevel_move(m_xdg_toplevel, seat.ptr(), serial);
 }
 
 }

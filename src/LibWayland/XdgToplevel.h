@@ -37,6 +37,7 @@ public:
     void set_title(ByteString const&);
     void set_app_id(ByteString const&);
     void set_minimized();
+    void move(Seat&, u32 serial);
 
 private:
     NonnullOwnPtr<XdgSurface> m_xdg_surface;
