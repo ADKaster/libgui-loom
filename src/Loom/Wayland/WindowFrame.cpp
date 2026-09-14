@@ -276,7 +276,7 @@ void WindowFrame::layout_buttons()
     auto button_rects = current_window_theme().layout_buttons(to_theme_window_type(m_window.type()), to_theme_window_mode(m_window.mode()), m_window.content_rect(), Application::the().palette(), m_buttons.size(), m_window.is_maximized());
     for (size_t i = 0; i < m_buttons.size(); i++) {
         m_buttons[i]->set_relative_rect(button_rects[i]);
-        m_buttons[i]->set_surface_rect(button_rects[i].translated(render_rect().location()));
+        m_buttons[i]->set_surface_rect(button_rects[i].translated((frame_rect().location() - render_rect().location())));
     }
 }
 
