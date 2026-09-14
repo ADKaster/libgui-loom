@@ -20,8 +20,10 @@ void Pointer::pointer_enter(void* data, wl_pointer* pointer, u32 serial, wl_surf
     VERIFY(self.ptr() == pointer);
     dbgln_if(WAYLAND_POINTER_DEBUG, "Pointer::pointer_enter: serial={}, surface={}, surface_x={}, surface_y={}", serial, surface, wl_fixed_to_double(surface_x), wl_fixed_to_double(surface_y));
 
+    auto* event_surface = surface ? static_cast<Surface*>(wl_surface_get_user_data(surface)) : nullptr;
+
     self.m_pending_events.empend(EnterEvent {
-        .surface = static_cast<Surface*>(wl_surface_get_user_data(surface)),
+        .surface = event_surface,
         .serial = serial,
         .position = { wl_fixed_to_int(surface_x), wl_fixed_to_int(surface_y) }
     });
@@ -33,8 +35,10 @@ void Pointer::pointer_leave(void* data, wl_pointer* pointer, u32 serial, wl_surf
     VERIFY(self.ptr() == pointer);
     dbgln_if(WAYLAND_POINTER_DEBUG, "Pointer::pointer_leave: serial={}, surface={}", serial, surface);
 
+    auto* event_surface = surface ? static_cast<Surface*>(wl_surface_get_user_data(surface)) : nullptr;
+
     self.m_pending_events.empend(LeaveEvent {
-        .surface = static_cast<Surface*>(wl_surface_get_user_data(surface)),
+        .surface = event_surface,
         .serial = serial
     });
 }
@@ -185,7 +189,7 @@ void Pointer::dispatch_pending_events()
                     m_delegate->on_pointer_enter(*this, m_focused_surface, enter.serial, enter.position);
             },
             [&](LeaveEvent const& leave) {
-                VERIFY(m_focused_surface == leave.surface);
+                VERIFY(m_focused_surface == leave.surface || !leave.surface);
                 if (m_delegate && m_delegate->on_pointer_leave)
                     m_delegate->on_pointer_leave(*this, m_focused_surface, leave.serial);
                 m_focused_surface = nullptr;

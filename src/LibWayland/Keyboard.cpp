@@ -61,7 +61,7 @@ void Keyboard::keyboard_enter(void* data, wl_keyboard* keyboard, u32 serial, wl_
     VERIFY(self.ptr() == keyboard);
     dbgln_if(WAYLAND_KEYBOARD_DEBUG, "Keyboard::keyboard_enter: serial={}, surface={}, keys={}", serial, surface, keys->size / sizeof(u32));
 
-    self.m_focused_surface = static_cast<Surface*>(wl_surface_get_user_data(surface));
+    self.m_focused_surface = surface ? static_cast<Surface*>(wl_surface_get_user_data(surface)) : nullptr;
 
     if (!self.m_delegate)
         return;
@@ -75,8 +75,8 @@ void Keyboard::keyboard_leave(void* data, wl_keyboard* keyboard, u32 serial, wl_
     VERIFY(self.ptr() == keyboard);
     dbgln_if(WAYLAND_KEYBOARD_DEBUG, "Keyboard::keyboard_leave: serial={}, surface={}", serial, surface);
 
-    auto* left_surface = static_cast<Surface*>(wl_surface_get_user_data(surface));
-    VERIFY(self.m_focused_surface == left_surface);
+    auto* left_surface = surface ? static_cast<Surface*>(wl_surface_get_user_data(surface)) : nullptr;
+    VERIFY(self.m_focused_surface == left_surface || !left_surface);
     self.m_focused_surface = nullptr;
 
     if (!self.m_delegate)
