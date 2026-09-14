@@ -13,6 +13,7 @@
 #include <Loom/Wayland/Events.h>
 #include <Loom/Wayland/WindowFrame.h>
 #include <Loom/WindowServerConnectionProxy.h>
+#include <WindowServer/ResizeDirection.h>
 #include <WindowServer/WindowMode.h>
 #include <WindowServer/WindowType.h>
 
@@ -53,6 +54,7 @@ public:
     void minimize();
     void close();
     void start_move(MouseEvent const&);
+    void start_resize(MouseEvent const&, WindowServer::ResizeDirection);
 
     [[nodiscard]] WindowServer::WindowType type() const { return m_type; }
     [[nodiscard]] WindowServer::WindowMode mode() const { return m_mode; }

@@ -493,14 +493,61 @@ RefPtr<Cursor const> WindowFrame::handle_mouse_event(MouseEvent const& event)
     if (menubar_rect().contains(adjusted_event.position()))
         return handle_menubar_mouse_event(adjusted_event);
 
-    // FIXME: Handle resize on frame edges
-    // Cursor:
-    //   if DragNDrop -> DragNDrop cursor or DragNDrop accept cursor
-    //   if moving -> Move cursor
-    //   if resizing OR hovering over frame edges -> pick Resize cursor
-    //   else Arrow cursor
+    return handle_border_mouse_event(adjusted_event);
+}
 
-    return Cursor::create(Gfx::StandardCursor::Arrow);
+static RefPtr<Cursor const> cursor_for_resize_direction(WindowServer::ResizeDirection direction)
+{
+    switch (direction) {
+    case WindowServer::ResizeDirection::Up:
+    case WindowServer::ResizeDirection::Down:
+        return Application::the().resize_vertically_cursor();
+    case WindowServer::ResizeDirection::Left:
+    case WindowServer::ResizeDirection::Right:
+        return Application::the().resize_horizontally_cursor();
+    case WindowServer::ResizeDirection::UpLeft:
+    case WindowServer::ResizeDirection::DownRight:
+        return Application::the().resize_diagonally_tlbr_cursor();
+    case WindowServer::ResizeDirection::UpRight:
+    case WindowServer::ResizeDirection::DownLeft:
+        return Application::the().resize_diagonally_bltr_cursor();
+    case WindowServer::ResizeDirection::None:
+        return Application::the().arrow_cursor();
+    default:
+        VERIFY_NOT_REACHED();
+    }
+}
+
+RefPtr<Cursor const> WindowFrame::handle_border_mouse_event(MouseEvent const& event)
+{
+    using WindowServer::ResizeDirection;
+    auto arrow_cursor = Cursor::create(Gfx::StandardCursor::Arrow);
+
+    if (!m_window.is_resizable())
+        return arrow_cursor;
+
+    constexpr ResizeDirection direction_for_hot_area[3][3] = {
+        { ResizeDirection::UpLeft, ResizeDirection::Up, ResizeDirection::UpRight },
+        { ResizeDirection::Left, ResizeDirection::None, ResizeDirection::Right },
+        { ResizeDirection::DownLeft, ResizeDirection::Down, ResizeDirection::DownRight },
+    };
+    Gfx::IntRect outer_rect = { {}, frame_rect().size() };
+    int window_relative_x = event.position().x() - outer_rect.x();
+    int window_relative_y = event.position().y() - outer_rect.y();
+    int corner_size = titlebar_rect().height();
+    int hot_area_row = (window_relative_y < corner_size) ? 0 : (window_relative_y > outer_rect.height() - corner_size) ? 2
+                                                                                                                       : 1;
+    int hot_area_column = (window_relative_x < corner_size) ? 0 : (window_relative_x > outer_rect.width() - corner_size) ? 2
+                                                                                                                         : 1;
+    ResizeDirection resize_direction = direction_for_hot_area[hot_area_row][hot_area_column];
+
+    // FIXME: WindowServer behavior on double click:
+    //        Latch a window's edge to the screen's edge
+
+    if (event.type() == MouseEvent::Type::MouseDown && event.button() == GUI::MouseButton::Primary && resize_direction != ResizeDirection::None)
+        m_window.start_resize(event, resize_direction);
+
+    return cursor_for_resize_direction(resize_direction);
 }
 
 RefPtr<Cursor const> WindowFrame::handle_titlebar_mouse_event(MouseEvent const& event)

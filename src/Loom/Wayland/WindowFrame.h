@@ -44,6 +44,7 @@ public:
     [[nodiscard]] RefPtr<Cursor const> handle_mouse_event(MouseEvent const&);
     [[nodiscard]] RefPtr<Cursor const> handle_titlebar_mouse_event(MouseEvent const&);
     [[nodiscard]] RefPtr<Cursor const> handle_menubar_mouse_event(MouseEvent const&);
+    [[nodiscard]] RefPtr<Cursor const> handle_border_mouse_event(MouseEvent const&);
 
     [[nodiscard]] Window& window() const { return m_window; }
 

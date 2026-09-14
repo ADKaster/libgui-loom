@@ -27,6 +27,30 @@ static Gfx::Bitmap const& default_window_icon()
     return *s_icon;
 }
 
+static Wayland::XdgToplevel::ResizeEdge to_resize_edge(WindowServer::ResizeDirection direction)
+{
+    switch (direction) {
+    case WindowServer::ResizeDirection::Up:
+        return Wayland::XdgToplevel::ResizeEdge::Top;
+    case WindowServer::ResizeDirection::Down:
+        return Wayland::XdgToplevel::ResizeEdge::Bottom;
+    case WindowServer::ResizeDirection::Left:
+        return Wayland::XdgToplevel::ResizeEdge::Left;
+    case WindowServer::ResizeDirection::Right:
+        return Wayland::XdgToplevel::ResizeEdge::Right;
+    case WindowServer::ResizeDirection::UpLeft:
+        return Wayland::XdgToplevel::ResizeEdge::TopLeft;
+    case WindowServer::ResizeDirection::UpRight:
+        return Wayland::XdgToplevel::ResizeEdge::TopRight;
+    case WindowServer::ResizeDirection::DownLeft:
+        return Wayland::XdgToplevel::ResizeEdge::BottomLeft;
+    case WindowServer::ResizeDirection::DownRight:
+        return Wayland::XdgToplevel::ResizeEdge::BottomRight;
+    default:
+        VERIFY_NOT_REACHED();
+    }
+}
+
 Window::Window(WindowServerConnectionProxy& client, NonnullOwnPtr<Wayland::XdgToplevel> toplevel, Wayland::Registry& registry, WindowServer::WindowType type, WindowServer::WindowMode mode, i32 window_id, i32 process_id, WindowFlags flags)
     : m_client(client)
     , m_frame(*this, registry)
@@ -122,6 +146,17 @@ void Window::start_move(MouseEvent const& event)
         return;
 
     m_toplevel->move(*event.seat(), event.seat_serial());
+}
+
+void Window::start_resize(MouseEvent const& event, WindowServer::ResizeDirection resize_direction)
+{
+    VERIFY(is_resizable());
+
+    // FIXME: Close all menus
+
+    // FIXME: Implement resize manually, without using xdg_toplevel.resize, to allow setting
+    //    a custom cursor during resize.
+    m_toplevel->resize(*event.seat(), event.seat_serial(), to_resize_edge(resize_direction));
 }
 
 void Window::set_title(ByteString const& title)
