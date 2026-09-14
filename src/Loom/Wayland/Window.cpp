@@ -113,6 +113,17 @@ void Window::close()
     m_client.async_window_close_request(m_window_id);
 }
 
+void Window::start_move(MouseEvent const& event)
+{
+    // FIXME: In order to set a cursor during a window move event, we must stub it
+    //    with toplevel drag (xdg-toplevel-drag-v1), or manually blit the cursor in place.
+    //    xdg-shell's toplevel move transfers all control to the compositor at this point.
+    if (m_mode != WindowServer::WindowMode::Modeless || m_type != WindowServer::WindowType::Normal)
+        return;
+
+    m_toplevel->move(*event.seat(), event.seat_serial());
+}
+
 void Window::set_title(ByteString const& title)
 {
     if (title == m_title)

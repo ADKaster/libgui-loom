@@ -52,6 +52,7 @@ public:
     void maximize_or_restore();
     void minimize();
     void close();
+    void start_move(MouseEvent const&);
 
     [[nodiscard]] WindowServer::WindowType type() const { return m_type; }
     [[nodiscard]] WindowServer::WindowMode mode() const { return m_mode; }

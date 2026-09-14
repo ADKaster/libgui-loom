@@ -20,6 +20,7 @@
 #include <Loom/Wayland/Cursor.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowFrame.h>
+#include <LibGUI/Event.h>
 #include <LibGfx/Painter.h>
 #include <LibGfx/WindowTheme.h>
 #include <WindowServer/SystemEffects.h>
@@ -517,6 +518,11 @@ RefPtr<Cursor const> WindowFrame::handle_titlebar_mouse_event(MouseEvent const& 
             button->handle_mouse_event(event.translated(-button->relative_rect().location()));
             return arrow_cursor;
         }
+    }
+
+    if (event.type() == MouseEvent::Type::MouseDown && event.button() == GUI::MouseButton::Primary) {
+        // Note: We can't set the pointer during xdg-toplevel's move
+        m_window.start_move(event);
     }
 
     return arrow_cursor;
