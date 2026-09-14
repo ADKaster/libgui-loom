@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/Noncopyable.h>
+#include <LibWayland/Forward.h>
 #include <LibGfx/Point.h>
 
 namespace Loom {
@@ -29,12 +30,14 @@ public:
         MouseWheel = 3,
     };
 
-    MouseEvent(Type type, Gfx::IntPoint position, u32 button, u32 buttons, u32 keyboard_modifiers)
+    MouseEvent(Type type, Gfx::IntPoint position, u32 button, u32 buttons, u32 keyboard_modifiers, u32 seat_serial, Wayland::Seat* seat)
         : m_type(type)
         , m_position(position)
         , m_button(button)
         , m_buttons(buttons)
         , m_keyboard_modifiers(keyboard_modifiers)
+        , m_seat_serial(seat_serial)
+        , m_seat(seat)
     {
     }
 
@@ -43,6 +46,8 @@ public:
     [[nodiscard]] u32 button() const { return m_button; }
     [[nodiscard]] u32 buttons() const { return m_buttons; }
     [[nodiscard]] u32 keyboard_modifiers() const { return m_keyboard_modifiers; }
+    [[nodiscard]] u32 seat_serial() const { return m_seat_serial; }
+    [[nodiscard]] Wayland::Seat* seat() const { return m_seat; }
 
     [[nodiscard]] MouseEvent translated(Gfx::IntPoint delta) const
     {
@@ -57,6 +62,8 @@ private:
     u32 m_button { 0 };
     u32 m_buttons { 0};
     u32 m_keyboard_modifiers { 0 };
+    u32 m_seat_serial { 0 };
+    Wayland::Seat* m_seat { nullptr };
 };
 
 class KeyboardEvent {

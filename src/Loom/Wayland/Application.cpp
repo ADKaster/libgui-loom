@@ -22,11 +22,8 @@
 #include <Loom/Wayland/WindowFrame.h>
 #include <LibWayland/Callback.h>
 #include <LibWayland/Display.h>
-#include <LibWayland/Keyboard.h>
 #include <LibWayland/Output.h>
-#include <LibWayland/Pointer.h>
 #include <LibWayland/Registry.h>
-#include <LibWayland/Seat.h>
 #include <Services/WindowServer/ScreenLayout.h>
 #include <Services/WindowServer/SystemEffects.h>
 
@@ -198,9 +195,7 @@ ErrorOr<void> Application::initialize(Main::Arguments arguments)
 
     TRY(sync_cb->promise().await());
 
-    m_seat_delegate = make<SeatDelegate>();
-    registry.seat().set_pointer_delegate(m_seat_delegate);
-    registry.seat().set_keyboard_delegate(m_seat_delegate);
+    m_seat_delegate = make<SeatDelegate>(registry.seat());
 
     TRY(load_cursor_theme(cursor_theme));
 

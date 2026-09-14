@@ -22,7 +22,7 @@ class SeatDelegate : public Wayland::KeyboardDelegate, public Wayland::PointerDe
     AK_MAKE_NONMOVABLE(SeatDelegate);
 public:
 
-    SeatDelegate();
+    SeatDelegate(Wayland::Seat&);
 
     void register_surface_owner(Wayland::Surface&, Window&);
     void unregister_surface_owner(Wayland::Surface&);
@@ -40,6 +40,7 @@ private:
 
     Window* get_window(Wayland::Surface*);
 
+    Wayland::Seat& m_seat;
     HashMap<Wayland::Surface*, Window*> m_surface_owners;
 
     u32 m_key_modifiers { 0 }; // FIXME: Why does WindowServer send *keyboard* modifiers in MouseEvents :v

@@ -13,6 +13,7 @@
 #include <Kernel/API/KeyCode.h>
 #include <LibGUI/Event.h>
 #include <LibWayland/Pointer.h>
+#include <LibWayland/Seat.h>
 #include <xkbcommon/xkbcommon.h>
 #include <limits.h>
 
@@ -313,7 +314,8 @@ Window* SeatDelegate::get_window(Wayland::Surface* surface)
     return *window;
 }
 
-SeatDelegate::SeatDelegate()
+SeatDelegate::SeatDelegate(Wayland::Seat& seat)
+    : m_seat(seat)
 {
     on_pointer_enter = [this](Wayland::Pointer&, Wayland::Surface* surface, u32 serial, Gfx::IntPoint position) {
         m_last_pointer_serial = serial;
@@ -344,7 +346,7 @@ SeatDelegate::SeatDelegate()
             type = MouseEvent::Type::MouseUp;
         }
 
-        auto const event = MouseEvent(type, m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers);
+        auto const event = MouseEvent(type, m_pointer_position, to_underlying(gui_button), m_mouse_buttons, m_key_modifiers, m_last_pointer_serial, &m_seat);
 
         auto* window = get_window(surface);
 
@@ -369,7 +371,7 @@ SeatDelegate::SeatDelegate()
 
     on_pointer_motion = [this](Wayland::Pointer& pointer, Wayland::Surface* surface, Duration, Gfx::IntPoint position) {
         m_pointer_position = position;
-        auto const event = MouseEvent(MouseEvent::Type::MouseMove, m_pointer_position, GUI::MouseButton::None, m_mouse_buttons, m_key_modifiers);
+        auto const event = MouseEvent(MouseEvent::Type::MouseMove, m_pointer_position, GUI::MouseButton::None, m_mouse_buttons, m_key_modifiers, m_last_pointer_serial, &m_seat);
 
         auto* window = get_window(surface);
 
@@ -417,6 +419,9 @@ SeatDelegate::SeatDelegate()
         else if (key_state == Wayland::KeyState::Released)
             window->client().async_key_up(window->window_id(), code_point, key_code, 0xFF, key_modifiers, raw_key);
     };
+
+    m_seat.set_pointer_delegate(this);
+    m_seat.set_keyboard_delegate(this);
 }
 
 void SeatDelegate::set_cursor_tracking_button(Button* button)
