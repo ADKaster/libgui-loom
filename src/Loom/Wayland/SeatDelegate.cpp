@@ -439,4 +439,9 @@ WeakPtr<Button> SeatDelegate::hovered_button()
     return m_hovered_button;
 }
 
+Gfx::IntPoint SeatDelegate::cursor_position() const
+{
+    return m_pointer_position;
+}
+
 }

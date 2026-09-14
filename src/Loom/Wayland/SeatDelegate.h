@@ -32,6 +32,10 @@ public:
     WeakPtr<Button> cursor_tracking_button();
     WeakPtr<Button> hovered_button();
 
+    // Note: This is only valid if there is a currently focused surface that
+    //       has been receiving pointer events!
+    Gfx::IntPoint cursor_position() const;
+
 private:
 
     Window* get_window(Wayland::Surface*);

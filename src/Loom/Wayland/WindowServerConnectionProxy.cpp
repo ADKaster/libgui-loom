@@ -7,9 +7,9 @@
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibGfx/SystemTheme.h>
 #include <Loom/Wayland/Application.h>
+#include <Loom/Wayland/SeatDelegate.h>
 #include <Loom/Wayland/Window.h>
 #include <Loom/Wayland/WindowServerConnectionProxy.h>
-
 #include <WindowServer/SystemEffects.h>
 #include <WindowServer/WindowMode.h>
 #include <WindowServer/WindowType.h>
@@ -719,7 +719,8 @@ void WindowServerConnectionProxy::set_global_cursor_position(Gfx::IntPoint posit
 Messages::WindowServer::GetGlobalCursorPositionResponse WindowServerConnectionProxy::get_global_cursor_position()
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: get_global_cursor_position()");
-    return nullptr;
+    // Note: Global cursor position is a lie. This is the surface-relative position of the last-focused surface
+    return Application::the().seat_delegate().cursor_position();
 }
 
 void WindowServerConnectionProxy::set_mouse_acceleration(float factor)
