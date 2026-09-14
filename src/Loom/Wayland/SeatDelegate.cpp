@@ -317,11 +317,14 @@ Window* SeatDelegate::get_window(Wayland::Surface* surface)
 SeatDelegate::SeatDelegate(Wayland::Seat& seat)
     : m_seat(seat)
 {
-    on_pointer_enter = [this](Wayland::Pointer&, Wayland::Surface* surface, u32 serial, Gfx::IntPoint position) {
+    on_pointer_enter = [this](Wayland::Pointer& pointer, Wayland::Surface* surface, u32 serial, Gfx::IntPoint position) {
         m_last_pointer_serial = serial;
         m_pointer_position = position;
-        if (auto* window = get_window(surface))
+        if (auto* window = get_window(surface)) {
             window->client().async_window_entered(window->window_id());
+            auto cursor = window->cursor();
+            pointer.set_cursor(serial, &cursor->surface(), cursor->params().hotspot());
+        }
     };
 
     on_pointer_leave = [this](Wayland::Pointer&, Wayland::Surface* surface, u32 serial) {
