@@ -288,7 +288,10 @@ Messages::WindowServer::GetWindowRectResponse WindowServerConnectionProxy::get_w
 Messages::WindowServer::GetWindowFloatingRectResponse WindowServerConnectionProxy::get_window_floating_rect(i32 window_id)
 {
     dbgln_if(WINDOW_SERVER_IPC_DEBUG, "WindowServer IPC: get_window_floating_rect(window_id={})", window_id);
-    (void)window_id;
+    if (auto window = m_impl->windows.get(window_id); window.has_value())
+        return (*window)->content_rect(); // FIXME: What is floating rect supposed to mean?
+
+    did_misbehave("GetWindowFloatingRect: Bad window ID");
     return nullptr;
 }
 
