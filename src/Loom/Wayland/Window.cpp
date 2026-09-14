@@ -297,7 +297,7 @@ RefPtr<Cursor const> Window::handle_mouse_event(MouseEvent const& event)
     HitTestResult hit_test_result = m_frame.hit_test(event.position());
 
     if (hit_test_result.is_frame_hit)
-        return m_frame.handle_mouse_event(event, hit_test_result);
+        return m_frame.handle_mouse_event(event);
 
     send_window_mouse_event(*this, hit_test_result.content_relative_position, event);
     return m_cursor;

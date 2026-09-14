@@ -465,17 +465,20 @@ HitTestResult WindowFrame::hit_test(Gfx::IntPoint const& surface_position) const
     };
 }
 
-RefPtr<Cursor const> WindowFrame::handle_mouse_event(MouseEvent const& event, HitTestResult const& hit_test_result)
+RefPtr<Cursor const> WindowFrame::handle_mouse_event(MouseEvent const& event)
 {
-    VERIFY(hit_test_result.is_frame_hit);
     VERIFY(!m_window.is_fullscreen());
 
-    auto adjusted_event = event.translated(inflated_for_shadow(frame_rect()).location());
-
     if (m_window.type() != WindowServer::WindowType::Normal && m_window.type() != WindowServer::WindowType::Notification)
-        return Cursor::create(Gfx::StandardCursor::Arrow);;
+        return Cursor::create(Gfx::StandardCursor::Arrow);
 
     // FIXME: Ignore windows with a blocking modal window
+
+    // Need to translate surface coordinates to frame-relative coordinates
+    auto frame_rect = this->frame_rect();
+    auto frame_rect_with_shadow = inflated_for_shadow(frame_rect);
+    auto frame_origin_in_surface_coordinates = frame_rect.location() - frame_rect_with_shadow.location();
+    auto adjusted_event = event.translated(-frame_origin_in_surface_coordinates);
 
     // This is slightly hackish, but expand the title bar rect by two pixels downwards,
     // so that mouse events between the title bar and window contents don't act like
@@ -483,10 +486,10 @@ RefPtr<Cursor const> WindowFrame::handle_mouse_event(MouseEvent const& event, Hi
     auto adjusted_titlebar_rect = titlebar_rect();
     adjusted_titlebar_rect.set_height(adjusted_titlebar_rect.height() + 2);
 
-    if (adjusted_titlebar_rect.contains(hit_test_result.content_relative_position))
+    if (adjusted_titlebar_rect.contains(adjusted_event.position()))
         return handle_titlebar_mouse_event(adjusted_event);
 
-    if (menubar_rect().contains(hit_test_result.content_relative_position))
+    if (menubar_rect().contains(adjusted_event.position()))
         return handle_menubar_mouse_event(adjusted_event);
 
     // FIXME: Handle resize on frame edges

@@ -41,7 +41,7 @@ public:
     void invalidate_decorations();
 
     [[nodiscard]] HitTestResult hit_test(Gfx::IntPoint const& surface_position) const;
-    [[nodiscard]] RefPtr<Cursor const> handle_mouse_event(MouseEvent const&, HitTestResult const&);
+    [[nodiscard]] RefPtr<Cursor const> handle_mouse_event(MouseEvent const&);
     [[nodiscard]] RefPtr<Cursor const> handle_titlebar_mouse_event(MouseEvent const&);
     [[nodiscard]] RefPtr<Cursor const> handle_menubar_mouse_event(MouseEvent const&);
 
