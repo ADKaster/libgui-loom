@@ -322,8 +322,9 @@ SeatDelegate::SeatDelegate(Wayland::Seat& seat)
         m_pointer_position = position;
         if (auto* window = get_window(surface)) {
             window->client().async_window_entered(window->window_id());
-            auto cursor = window->cursor();
-            pointer.set_cursor(serial, &cursor->surface(), cursor->params().hotspot());
+            if (auto cursor = window->cursor()) {
+                pointer.set_cursor(serial, &cursor->surface(), cursor->params().hotspot());
+            }
         }
     };
 
